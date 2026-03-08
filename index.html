@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGIS Sumatera Utara</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { height: 100vh; width: 100vw; }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+
+    <script>
+        var map = L.map('map').setView([2.5, 99.0], 7);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        // ==========================================
+        // 1. PENGATURAN WARNA & GAYA (STYLING)
+        // ==========================================
+
+        function getWarnaInfiltrasi(kelas) {
+            return kelas === 'Besar'      ? '#d73027' : 
+                   kelas === 'Agak Besar' ? '#fc8d59' : 
+                   kelas === 'Sedang'     ? '#fee08b' : 
+                   kelas === 'Agak Kecil' ? '#d9ef8b' : 
+                   kelas === 'Kecil'      ? '#91cf60' : '#cccccc';  
+        }
+        function styleInfiltrasi(feature) {
+            return { fillColor: getWarnaInfiltrasi(feature.properties.Infiltrasi), weight: 0, opacity: 1, color: 'white', fillOpacity: 0.8 };
+        }
+
+        function getWarnaCurahHujan(kelas) {
+            return kelas === 'Sangat Rendah' ? '#00ffff' : 
+                   kelas === 'Rendah'        ? '#0000ff' : 
+                   kelas === 'Sedang'        ? '#8a2be2' : 
+                   kelas === 'Tinggi'        ? '#ff00ff' : 
+                   kelas === 'Sangat Tinggi' ? '#8b008b' : '#cccccc';
+        }
+        function styleCurahHujan(feature) {
+            return { fillColor: getWarnaCurahHujan(feature.properties.Keterangan), weight: 0, opacity: 1, color: 'white', fillOpacity: 0.8 };
+        }
+
+        function getWarnaPenggunaanLahan(kelas) {
+            return kelas === 'Sangat Baik'        ? '#1a9641' : 
+                   kelas === 'Baik'               ? '#a6d96a' : 
+                   kelas === 'Sedang'             ? '#ffffbf' : 
+                   kelas === 'Kurang Baik'        ? '#fdae61' : 
+                   kelas === 'Sangat Kurang Baik' ? '#d7191c' : '#cccccc';
+        }
+        function stylePenggunaanLahan(feature) {
+            return { fillColor: getWarnaPenggunaanLahan(feature.properties.Ketarangan), weight: 0, opacity: 1, color: 'white', fillOpacity: 0.8 };
+        }
+
+        function getWarnaKerapatanSungai(kelas) {
+            return kelas === 'Sangat Baik'        ? '#1a9641' : 
+                   kelas === 'Baik'               ? '#a6d96a' : 
+                   kelas === 'Sedang'             ? '#ffffbf' : 
+                   kelas === 'Kurang Baik'        ? '#fdae61' : 
+                   kelas === 'Sangat Kurang Baik' ? '#d7191c' : '#cccccc';
+        }
+        function styleKerapatanSungai(feature) {
+            return { fillColor: getWarnaKerapatanSungai(feature.properties.Keterangan), weight: 0, opacity: 1, color: 'white', fillOpacity: 0.8 };
+        }
+
+        function getWarnaKelerengan(kelas) {
+    return kelas === 'Datar'      ? '#267300' : // Hijau Tua
+           kelas === 'Landai'     ? '#aaff00' : // Hijau Muda
+           kelas === 'Agak Curam' ? '#ffaa00' : // Oranye
+           kelas === 'Curam'      ? '#ff5500' : // Merah Oranye
+           kelas === 'Sangat Curam' ? '#a80000' : // Merah Tua
+                                    '#cccccc';
+         }
+
+         function styleKelerengan(feature) {
+            return {
+               fillColor: getWarnaKelerengan(feature.properties.Keterangan), 
+               weight: 0, // Sudah tanpa outline sesuai permintaan Anda
+               fillOpacity: 0.8
+            };
+         }
+
+        // ==========================================
+        // 2. LAYER GROUP & LAYER CONTROL
+        // ==========================================
+
+        var layerInfiltrasi = L.layerGroup();
+        var layerCurahHujan = L.layerGroup();
+        var layerPenggunaanLahan = L.layerGroup();
+        var layerKerapatanSungai = L.layerGroup();
+
+        var overlayMaps = {
+            "Peta Infiltrasi": layerInfiltrasi,
+            "Peta Curah Hujan": layerCurahHujan,
+            "Penggunaan Lahan": layerPenggunaanLahan,
+            "Kerapatan Sungai": layerKerapatanSungai
+        };
+        L.control.layers(null, overlayMaps, {collapsed: false}).addTo(map);
+
+        // ==========================================
+        // 3. MEMUAT DATA GEOJSON
+        // ==========================================
+
+        fetch('DataSIG/Infiltrasi.geojson')
+            .then(res => res.json()).then(data => { L.geoJSON(data, { style: styleInfiltrasi }).addTo(layerInfiltrasi); layerInfiltrasi.addTo(map); });
+
+        fetch('DataSIG/CurahHujan.geojson')
+            .then(res => res.json()).then(data => { L.geoJSON(data, { style: styleCurahHujan }).addTo(layerCurahHujan); });
+
+        fetch('DataSIG/PenggunaanLahan.geojson')
+            .then(res => res.json()).then(data => { L.geoJSON(data, { style: stylePenggunaanLahan }).addTo(layerPenggunaanLahan); });
+
+        fetch('DataSIG/KerapatanSungai.geojson')
+            .then(res => res.json()).then(data => { L.geoJSON(data, { style: styleKerapatanSungai }).addTo(layerKerapatanSungai); });
+
+    </script>
+</body>
+</html>
