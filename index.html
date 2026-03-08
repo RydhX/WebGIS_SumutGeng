@@ -1,127 +1,1043 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebGIS Sumatera Utara</title>
-    
+    <title>WebGIS — Sumatera Utara</title>
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <style>
-        body { margin: 0; padding: 0; }
-        #map { height: 100vh; width: 100vw; }
+        :root {
+            --bg: #0a0d12;
+            --surface: #111520;
+            --surface2: #161c2d;
+            --border: rgba(100,140,255,0.15);
+            --accent: #4f8fff;
+            --accent2: #00d4aa;
+            --accent3: #ff6b6b;
+            --text: #e8edf8;
+            --text-muted: #6b7a99;
+            --glass: rgba(17, 21, 32, 0.85);
+            --glow: rgba(79,143,255,0.25);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--bg);
+            font-family: 'Poppins', sans-serif;
+            color: var(--text);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* ====== MAP ====== */
+        #map {
+            height: 100vh;
+            width: 100vw;
+            position: absolute;
+            top: 0; left: 0;
+            z-index: 1;
+            filter: brightness(0.85) saturate(1.1);
+        }
+
+        /* Dark tile override */
+        .leaflet-tile { filter: invert(1) hue-rotate(200deg) brightness(0.75) saturate(0.8); }
+
+        /* ====== OVERLAY CONTAINER ====== */
+        .overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 1000;
+            pointer-events: none;
+        }
+        .overlay > * { pointer-events: all; }
+
+        /* ====== TOP HEADER BAR ====== */
+        .header {
+            position: absolute;
+            top: 20px; left: 50%;
+            transform: translateX(-50%);
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 12px 28px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            animation: slideDown 0.7s cubic-bezier(0.16,1,0.3,1) both;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px var(--border);
+        }
+
+        .header-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 10px var(--accent);
+            animation: pulse 2s infinite;
+        }
+
+        .header h1 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 15px;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--text);
+        }
+
+        .header-divider {
+            width: 1px; height: 20px;
+            background: var(--border);
+        }
+
+        .header-meta {
+            font-family: 'Poppins', sans-serif;
+            font-size: 10px;
+            color: var(--text-muted);
+            letter-spacing: 0.08em;
+        }
+
+        /* ====== LEFT PANEL — LAYER CONTROL ====== */
+        .panel-left {
+            position: absolute;
+            left: 20px; top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            animation: slideRight 0.8s cubic-bezier(0.16,1,0.3,1) 0.2s both;
+        }
+
+        .panel-title {
+            font-family: 'Poppins', sans-serif;
+            font-size: 9px;
+            letter-spacing: 0.2em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            padding: 0 4px;
+            margin-bottom: 4px;
+        }
+
+        .layer-btn {
+            position: relative;
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 18px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 200px;
+            overflow: hidden;
+        }
+
+        .layer-btn::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 3px;
+            border-radius: 0 2px 2px 0;
+            transition: all 0.3s;
+        }
+
+        .layer-btn.active { border-color: rgba(100,140,255,0.4); background: rgba(17,21,32,0.95); }
+        .layer-btn.active::before { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+        .layer-btn:hover { transform: translateX(4px); border-color: rgba(100,140,255,0.3); }
+
+        .layer-btn.active .layer-label { color: var(--text); }
+        .layer-btn .layer-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            transition: color 0.3s;
+            flex: 1;
+        }
+
+        .layer-indicator {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            border: 2px solid currentColor;
+            transition: all 0.3s;
+            flex-shrink: 0;
+        }
+        .layer-btn.active .layer-indicator {
+            background: currentColor;
+            box-shadow: 0 0 8px currentColor;
+        }
+
+        .layer-toggle {
+            width: 32px; height: 18px;
+            border-radius: 9px;
+            background: var(--surface2);
+            position: relative;
+            flex-shrink: 0;
+            transition: background 0.3s;
+        }
+        .layer-toggle::after {
+            content: '';
+            position: absolute;
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            top: 3px; left: 3px;
+            transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+        }
+        .layer-btn.active .layer-toggle { background: var(--accent); }
+        .layer-btn.active .layer-toggle::after {
+            background: white;
+            left: 17px;
+            box-shadow: 0 0 6px rgba(79,143,255,0.6);
+        }
+
+        /* ====== RIGHT PANEL — LEGEND ====== */
+        .panel-right {
+            position: absolute;
+            right: 20px; top: 50%;
+            transform: translateY(-50%);
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            min-width: 200px;
+            animation: slideLeft 0.8s cubic-bezier(0.16,1,0.3,1) 0.3s both;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        }
+
+        .legend-title {
+            font-family: 'Poppins', sans-serif;
+            font-size: 9px;
+            letter-spacing: 0.2em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        #legend-content { display: flex; flex-direction: column; gap: 8px; }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            transition: all 0.3s;
+            padding: 4px 6px;
+            border-radius: 6px;
+            cursor: default;
+        }
+        .legend-item:hover { background: rgba(255,255,255,0.04); color: var(--text); }
+
+        .legend-swatch {
+            width: 14px; height: 14px;
+            border-radius: 4px;
+            flex-shrink: 0;
+            box-shadow: 0 0 6px currentColor;
+        }
+
+        /* ====== BOTTOM BAR — MAP ELEMENTS ====== */
+        .bottom-bar {
+            position: absolute;
+            bottom: 20px; left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideUp 0.8s cubic-bezier(0.16,1,0.3,1) 0.4s both;
+        }
+
+        .map-widget {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 10px;
+            color: var(--text-muted);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        }
+
+        /* Scale bar */
+        .scale-widget { flex-direction: column; gap: 4px; }
+        .scale-bar {
+            display: flex;
+            align-items: flex-end;
+            gap: 0;
+        }
+        .scale-seg {
+            height: 6px;
+            border: 1px solid var(--text-muted);
+            border-right: none;
+        }
+        .scale-seg:last-child { border-right: 1px solid var(--text-muted); }
+        .scale-seg:nth-child(odd) { background: var(--text-muted); }
+        .scale-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 8px;
+        }
+
+        /* Coordinates */
+        .coord-icon {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--accent2);
+            box-shadow: 0 0 8px var(--accent2);
+            animation: pulse 2s infinite;
+        }
+
+        /* Compass */
+        .compass-widget {
+            padding: 10px;
+        }
+        .compass-rose {
+            width: 52px; height: 52px;
+            position: relative;
+        }
+        .compass-rose svg { width: 100%; height: 100%; }
+
+        /* Zoom */
+        .zoom-widget { flex-direction: column; gap: 2px; align-items: center; padding: 8px 10px; }
+        .zoom-btn {
+            width: 24px; height: 24px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            color: var(--text-muted);
+            transition: all 0.2s;
+            line-height: 1;
+        }
+        .zoom-btn:hover { background: var(--surface); color: var(--text); border-color: var(--accent); }
+        .zoom-level {
+            font-size: 9px;
+            letter-spacing: 0.1em;
+            padding: 2px 0;
+        }
+
+        /* Grid projection badge */
+        .proj-widget {
+            flex-direction: column;
+            gap: 2px;
+            align-items: flex-start;
+        }
+        .proj-label {
+            font-size: 8px;
+            color: var(--text-muted);
+            opacity: 0.7;
+        }
+        .proj-value {
+            color: var(--accent2);
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        /* ====== POPUP ====== */
+        .info-popup {
+            position: absolute;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: var(--glass);
+            backdrop-filter: blur(24px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px 24px;
+            min-width: 320px;
+            max-width: 420px;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
+            box-shadow: 0 16px 48px rgba(0,0,0,0.5), 0 0 0 1px var(--border);
+            z-index: 2000;
+        }
+        .info-popup.visible {
+            opacity: 1;
+            pointer-events: all;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .popup-close {
+            position: absolute;
+            top: 12px; right: 14px;
+            width: 24px; height: 24px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px;
+            color: var(--text-muted);
+            transition: all 0.2s;
+            line-height: 1;
+        }
+        .popup-close:hover { background: var(--surface); color: var(--text); }
+
+        .popup-tag {
+            font-family: 'Poppins', sans-serif;
+            font-size: 8px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 8px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .popup-tag::before {
+            content: '';
+            width: 4px; height: 4px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 6px var(--accent);
+        }
+
+        .popup-title {
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 14px;
+            line-height: 1.2;
+        }
+
+        .popup-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .popup-stat {
+            background: var(--surface2);
+            border-radius: 10px;
+            padding: 10px 12px;
+            border: 1px solid rgba(255,255,255,0.04);
+        }
+        .popup-stat-label {
+            font-family: 'Poppins', sans-serif;
+            font-size: 8px;
+            color: var(--text-muted);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .popup-stat-value {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text);
+        }
+        .popup-stat-value.accent { color: var(--accent); }
+        .popup-stat-value.accent2 { color: var(--accent2); }
+
+        .popup-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            margin-top: 12px;
+        }
+
+        /* ====== GRID OVERLAY ====== */
+        .grid-overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 5;
+            opacity: 0.04;
+            background-image:
+                linear-gradient(rgba(100,140,255,0.8) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(100,140,255,0.8) 1px, transparent 1px);
+            background-size: 80px 80px;
+        }
+
+        /* ====== CORNER DECORATIONS ====== */
+        .corner {
+            position: absolute;
+            width: 24px; height: 24px;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .corner::before, .corner::after { content: ''; position: absolute; background: var(--accent); opacity: 0.5; }
+        .corner::before { width: 2px; height: 100%; }
+        .corner::after { width: 100%; height: 2px; }
+
+        .corner-tl { top: 0; left: 0; }
+        .corner-tr { top: 0; right: 0; transform: scaleX(-1); }
+        .corner-bl { bottom: 0; left: 0; transform: scaleY(-1); }
+        .corner-br { bottom: 0; right: 0; transform: scale(-1); }
+
+        /* ====== STATUS BAR ====== */
+        .status-bar {
+            position: absolute;
+            top: 20px; right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            animation: slideLeft 0.7s cubic-bezier(0.16,1,0.3,1) 0.15s both;
+        }
+
+        .status-chip {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 8px 14px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 9px;
+            color: var(--text-muted);
+            letter-spacing: 0.1em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 5px; height: 5px;
+            border-radius: 50%;
+            background: var(--accent2);
+            box-shadow: 0 0 6px var(--accent2);
+            animation: pulse 3s infinite;
+        }
+
+        /* ====== ANIMATIONS ====== */
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        @keyframes slideRight {
+            from { opacity: 0; transform: translateY(-50%) translateX(-20px); }
+            to { opacity: 1; transform: translateY(-50%) translateX(0); }
+        }
+        @keyframes slideLeft {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Leaflet overrides */
+        .leaflet-control-attribution { display: none; }
+        .leaflet-control-zoom { display: none; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+        /* Hover tooltip */
+        .hover-info {
+            position: absolute;
+            top: 20px; left: 20px;
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 10px 16px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 10px;
+            color: var(--text-muted);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            animation: slideRight 0.7s cubic-bezier(0.16,1,0.3,1) 0.1s both;
+        }
+        .hover-info.show { opacity: 1; }
     </style>
 </head>
 <body>
 
+    <!-- Grid Overlay -->
+    <div class="grid-overlay"></div>
+
+    <!-- Corner Decorations -->
+    <div class="corner corner-tl"></div>
+    <div class="corner corner-tr"></div>
+    <div class="corner corner-bl"></div>
+    <div class="corner corner-br"></div>
+
+    <!-- Map -->
     <div id="map"></div>
 
+    <!-- Overlay UI -->
+    <div class="overlay">
+
+        <!-- Header -->
+        <div class="header">
+            <div class="header-dot"></div>
+            <h1>WebGIS — Sumatera Utara</h1>
+            <div class="header-divider"></div>
+            <div class="header-meta">WGS 84 · UTM Zone 47N</div>
+            <div class="header-divider"></div>
+            <div class="header-meta" id="live-time">--:--:--</div>
+        </div>
+
+        <!-- Status chips top-right -->
+        <div class="status-bar">
+            <div class="status-chip"><div class="status-dot"></div> LIVE DATA</div>
+            <div class="status-chip" id="coord-display">0.0000°N, 0.0000°E</div>
+        </div>
+
+        <!-- Left Panel — Layer Controls -->
+        <div class="panel-left">
+            <div class="panel-title">// Layers</div>
+            <div class="layer-btn active" data-layer="infiltrasi" style="--clr:#fc8d59">
+                <div class="layer-indicator" style="color:#fc8d59"></div>
+                <span class="layer-label">Peta Infiltrasi</span>
+                <div class="layer-toggle"></div>
+            </div>
+            <div class="layer-btn" data-layer="curahhujan" style="--clr:#8a2be2">
+                <div class="layer-indicator" style="color:#8a2be2"></div>
+                <span class="layer-label">Curah Hujan</span>
+                <div class="layer-toggle"></div>
+            </div>
+            <div class="layer-btn" data-layer="penggunaanlahan" style="--clr:#1a9641">
+                <div class="layer-indicator" style="color:#1a9641"></div>
+                <span class="layer-label">Penggunaan Lahan</span>
+                <div class="layer-toggle"></div>
+            </div>
+            <div class="layer-btn" data-layer="kerapatansungai" style="--clr:#4f8fff">
+                <div class="layer-indicator" style="color:#4f8fff"></div>
+                <span class="layer-label">Kerapatan Sungai</span>
+                <div class="layer-toggle"></div>
+            </div>
+        </div>
+
+        <!-- Right Panel — Legend -->
+        <div class="panel-right">
+            <div class="legend-title">Legenda</div>
+            <div id="legend-content"></div>
+        </div>
+
+        <!-- Bottom Bar -->
+        <div class="bottom-bar">
+
+            <!-- Projection -->
+            <div class="map-widget proj-widget">
+                <div class="proj-label">PROYEKSI</div>
+                <div class="proj-value">WGS 1984</div>
+                <div class="proj-label">UTM ZONE 47N</div>
+            </div>
+
+            <!-- Scale Bar -->
+            <div class="map-widget scale-widget">
+                <div class="scale-bar" id="scale-bar">
+                    <div class="scale-seg" style="width:40px"></div>
+                    <div class="scale-seg" style="width:40px"></div>
+                    <div class="scale-seg" style="width:40px"></div>
+                    <div class="scale-seg" style="width:40px"></div>
+                </div>
+                <div class="scale-labels">
+                    <span>0</span>
+                    <span id="scale-label">50 km</span>
+                </div>
+            </div>
+
+            <!-- Coordinates -->
+            <div class="map-widget">
+                <div class="coord-icon"></div>
+                <div>
+                    <div style="font-size:8px;opacity:0.6;margin-bottom:2px">KOORDINAT KURSOR</div>
+                    <div id="coord-bottom" style="color:var(--accent2)">—</div>
+                </div>
+            </div>
+
+            <!-- Zoom -->
+            <div class="map-widget zoom-widget">
+                <div class="zoom-btn" id="btn-zoomin">+</div>
+                <div class="zoom-level" id="zoom-display">Z7</div>
+                <div class="zoom-btn" id="btn-zoomout">−</div>
+            </div>
+
+            <!-- Compass -->
+            <div class="map-widget compass-widget">
+                <div class="compass-rose">
+                    <svg viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="26" cy="26" r="24" stroke="rgba(100,140,255,0.2)" stroke-width="1"/>
+                        <circle cx="26" cy="26" r="18" stroke="rgba(100,140,255,0.1)" stroke-width="1" stroke-dasharray="2 3"/>
+                        <!-- N arrow (red) -->
+                        <polygon points="26,4 22,26 26,24 30,26" fill="#ff6b6b" opacity="0.9"/>
+                        <!-- S arrow -->
+                        <polygon points="26,48 22,26 26,28 30,26" fill="rgba(255,255,255,0.3)"/>
+                        <!-- E W ticks -->
+                        <line x1="48" y1="26" x2="44" y2="26" stroke="rgba(100,140,255,0.5)" stroke-width="1.5"/>
+                        <line x1="4" y1="26" x2="8" y2="26" stroke="rgba(100,140,255,0.5)" stroke-width="1.5"/>
+                        <!-- Center dot -->
+                        <circle cx="26" cy="26" r="3" fill="white" opacity="0.8"/>
+                        <!-- Labels -->
+                        <text x="26" y="12" text-anchor="middle" fill="#ff6b6b" font-size="7" font-family="Poppins" font-weight="700">N</text>
+                        <text x="26" y="46" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="6" font-family="Poppins">S</text>
+                        <text x="46" y="28" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="6" font-family="Poppins">E</text>
+                        <text x="6" y="28" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="6" font-family="Poppins">W</text>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feature Info Popup -->
+        <div class="info-popup" id="info-popup">
+            <button class="popup-close" id="popup-close">✕</button>
+            <div class="popup-tag" id="popup-tag">Layer</div>
+            <div class="popup-title" id="popup-title">Nama Wilayah</div>
+            <div class="popup-grid" id="popup-grid"></div>
+            <div id="popup-badge-container"></div>
+        </div>
+
+    </div>
+
     <script>
-        var map = L.map('map').setView([2.5, 99.0], 7);
+        // ======================================
+        // MAP INIT
+        // ======================================
+        var map = L.map('map', { zoomControl: false, attributionControl: false })
+                   .setView([2.5, 99.0], 7);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-        // ==========================================
-        // 1. PENGATURAN WARNA & GAYA (STYLING)
-        // ==========================================
-
-        function getWarnaInfiltrasi(kelas) {
-            return kelas === 'Besar'      ? '#d73027' : 
-                   kelas === 'Agak Besar' ? '#fc8d59' : 
-                   kelas === 'Sedang'     ? '#fee08b' : 
-                   kelas === 'Agak Kecil' ? '#d9ef8b' : 
-                   kelas === 'Kecil'      ? '#91cf60' : '#cccccc';  
-        }
-        function styleInfiltrasi(feature) {
-            return { fillColor: getWarnaInfiltrasi(feature.properties.Infiltrasi), weight: 0, opacity: 1, color: 'white', fillOpacity: 0.8 };
-        }
-
-        function getWarnaCurahHujan(kelas) {
-            return kelas === 'Sangat Rendah' ? '#00ffff' : 
-                   kelas === 'Rendah'        ? '#0000ff' : 
-                   kelas === 'Sedang'        ? '#8a2be2' : 
-                   kelas === 'Tinggi'        ? '#ff00ff' : 
-                   kelas === 'Sangat Tinggi' ? '#8b008b' : '#cccccc';
-        }
-        function styleCurahHujan(feature) {
-            return { fillColor: getWarnaCurahHujan(feature.properties.Keterangan), weight: 0, opacity: 1, color: 'white', fillOpacity: 0.8 };
-        }
-
-        function getWarnaPenggunaanLahan(kelas) {
-            return kelas === 'Sangat Baik'        ? '#1a9641' : 
-                   kelas === 'Baik'               ? '#a6d96a' : 
-                   kelas === 'Sedang'             ? '#ffffbf' : 
-                   kelas === 'Kurang Baik'        ? '#fdae61' : 
-                   kelas === 'Sangat Kurang Baik' ? '#d7191c' : '#cccccc';
-        }
-        function stylePenggunaanLahan(feature) {
-            return { fillColor: getWarnaPenggunaanLahan(feature.properties.Ketarangan), weight: 0, opacity: 1, color: 'white', fillOpacity: 0.8 };
-        }
-
-        function getWarnaKerapatanSungai(kelas) {
-            return kelas === 'Sangat Baik'        ? '#1a9641' : 
-                   kelas === 'Baik'               ? '#a6d96a' : 
-                   kelas === 'Sedang'             ? '#ffffbf' : 
-                   kelas === 'Kurang Baik'        ? '#fdae61' : 
-                   kelas === 'Sangat Kurang Baik' ? '#d7191c' : '#cccccc';
-        }
-        function styleKerapatanSungai(feature) {
-            return { fillColor: getWarnaKerapatanSungai(feature.properties.Keterangan), weight: 0, opacity: 1, color: 'white', fillOpacity: 0.8 };
-        }
-
-        function getWarnaKelerengan(kelas) {
-    return kelas === 'Datar'      ? '#267300' : // Hijau Tua
-           kelas === 'Landai'     ? '#aaff00' : // Hijau Muda
-           kelas === 'Agak Curam' ? '#ffaa00' : // Oranye
-           kelas === 'Curam'      ? '#ff5500' : // Merah Oranye
-           kelas === 'Sangat Curam' ? '#a80000' : // Merah Tua
-                                    '#cccccc';
-         }
-
-         function styleKelerengan(feature) {
-            return {
-               fillColor: getWarnaKelerengan(feature.properties.Keterangan), 
-               weight: 0, // Sudah tanpa outline sesuai permintaan Anda
-               fillOpacity: 0.8
-            };
-         }
-
-        // ==========================================
-        // 2. LAYER GROUP & LAYER CONTROL
-        // ==========================================
-
-        var layerInfiltrasi = L.layerGroup();
-        var layerCurahHujan = L.layerGroup();
-        var layerPenggunaanLahan = L.layerGroup();
-        var layerKerapatanSungai = L.layerGroup();
-
-        var overlayMaps = {
-            "Peta Infiltrasi": layerInfiltrasi,
-            "Peta Curah Hujan": layerCurahHujan,
-            "Penggunaan Lahan": layerPenggunaanLahan,
-            "Kerapatan Sungai": layerKerapatanSungai
+        // ======================================
+        // LEGEND DATA
+        // ======================================
+        const legends = {
+            infiltrasi: {
+                label: 'Peta Infiltrasi',
+                items: [
+                    { color: '#d73027', label: 'Besar' },
+                    { color: '#fc8d59', label: 'Agak Besar' },
+                    { color: '#fee08b', label: 'Sedang' },
+                    { color: '#d9ef8b', label: 'Agak Kecil' },
+                    { color: '#91cf60', label: 'Kecil' },
+                ]
+            },
+            curahhujan: {
+                label: 'Curah Hujan',
+                items: [
+                    { color: '#00ffff', label: 'Sangat Rendah' },
+                    { color: '#0000ff', label: 'Rendah' },
+                    { color: '#8a2be2', label: 'Sedang' },
+                    { color: '#ff00ff', label: 'Tinggi' },
+                    { color: '#8b008b', label: 'Sangat Tinggi' },
+                ]
+            },
+            penggunaanlahan: {
+                label: 'Penggunaan Lahan',
+                items: [
+                    { color: '#1a9641', label: 'Sangat Baik' },
+                    { color: '#a6d96a', label: 'Baik' },
+                    { color: '#ffffbf', label: 'Sedang' },
+                    { color: '#fdae61', label: 'Kurang Baik' },
+                    { color: '#d7191c', label: 'Sangat Kurang Baik' },
+                ]
+            },
+            kerapatansungai: {
+                label: 'Kerapatan Sungai',
+                items: [
+                    { color: '#1a9641', label: 'Sangat Baik' },
+                    { color: '#a6d96a', label: 'Baik' },
+                    { color: '#ffffbf', label: 'Sedang' },
+                    { color: '#fdae61', label: 'Kurang Baik' },
+                    { color: '#d7191c', label: 'Sangat Kurang Baik' },
+                ]
+            }
         };
-        L.control.layers(null, overlayMaps, {collapsed: false}).addTo(map);
 
-        // ==========================================
-        // 3. MEMUAT DATA GEOJSON
-        // ==========================================
+        // ======================================
+        // STYLE FUNCTIONS
+        // ======================================
+        const styleFns = {
+            infiltrasi: {
+                prop: 'Infiltrasi',
+                colors: { 'Besar':'#d73027','Agak Besar':'#fc8d59','Sedang':'#fee08b','Agak Kecil':'#d9ef8b','Kecil':'#91cf60' }
+            },
+            curahhujan: {
+                prop: 'Keterangan',
+                colors: { 'Sangat Rendah':'#00ffff','Rendah':'#0000ff','Sedang':'#8a2be2','Tinggi':'#ff00ff','Sangat Tinggi':'#8b008b' }
+            },
+            penggunaanlahan: {
+                prop: 'Ketarangan',
+                colors: { 'Sangat Baik':'#1a9641','Baik':'#a6d96a','Sedang':'#ffffbf','Kurang Baik':'#fdae61','Sangat Kurang Baik':'#d7191c' }
+            },
+            kerapatansungai: {
+                prop: 'Keterangan',
+                colors: { 'Sangat Baik':'#1a9641','Baik':'#a6d96a','Sedang':'#ffffbf','Kurang Baik':'#fdae61','Sangat Kurang Baik':'#d7191c' }
+            }
+        };
 
-        fetch('DataSIG/Infiltrasi.geojson')
-            .then(res => res.json()).then(data => { L.geoJSON(data, { style: styleInfiltrasi }).addTo(layerInfiltrasi); layerInfiltrasi.addTo(map); });
+        function makeStyle(layerKey) {
+            return function(feature) {
+                const cfg = styleFns[layerKey];
+                const val = feature.properties[cfg.prop];
+                return {
+                    fillColor: cfg.colors[val] || '#cccccc',
+                    weight: 0.5,
+                    opacity: 0.3,
+                    color: 'rgba(255,255,255,0.3)',
+                    fillOpacity: 0.75
+                };
+            };
+        }
 
-        fetch('DataSIG/CurahHujan.geojson')
-            .then(res => res.json()).then(data => { L.geoJSON(data, { style: styleCurahHujan }).addTo(layerCurahHujan); });
+        // ======================================
+        // POPUP INFO
+        // ======================================
+        const popup = document.getElementById('info-popup');
+        const popupClose = document.getElementById('popup-close');
 
-        fetch('DataSIG/PenggunaanLahan.geojson')
-            .then(res => res.json()).then(data => { L.geoJSON(data, { style: stylePenggunaanLahan }).addTo(layerPenggunaanLahan); });
+        popupClose.onclick = () => popup.classList.remove('visible');
 
-        fetch('DataSIG/KerapatanSungai.geojson')
-            .then(res => res.json()).then(data => { L.geoJSON(data, { style: styleKerapatanSungai }).addTo(layerKerapatanSungai); });
+        const popupInfoMap = {
+            infiltrasi: (p) => ({
+                tag: 'Peta Infiltrasi',
+                title: p.Infiltrasi || 'N/A',
+                stats: [
+                    { label: 'Kelas', value: p.Infiltrasi || '—' },
+                    { label: 'Layer', value: 'Infiltrasi', cls: 'accent' },
+                    { label: 'Region', value: p.KABKOT || p.Nama || '—' },
+                    { label: 'Provinsi', value: 'Sumatera Utara' },
+                ],
+                badge: p.Infiltrasi,
+                badgeColor: styleFns.infiltrasi.colors[p.Infiltrasi] || '#666'
+            }),
+            curahhujan: (p) => ({
+                tag: 'Curah Hujan',
+                title: p.Keterangan || 'N/A',
+                stats: [
+                    { label: 'Kategori', value: p.Keterangan || '—' },
+                    { label: 'Layer', value: 'Curah Hujan', cls: 'accent' },
+                    { label: 'Region', value: p.KABKOT || p.Nama || '—' },
+                    { label: 'Provinsi', value: 'Sumatera Utara' },
+                ],
+                badge: p.Keterangan,
+                badgeColor: styleFns.curahhujan.colors[p.Keterangan] || '#666'
+            }),
+            penggunaanlahan: (p) => ({
+                tag: 'Penggunaan Lahan',
+                title: p.Ketarangan || 'N/A',
+                stats: [
+                    { label: 'Kategori', value: p.Ketarangan || '—' },
+                    { label: 'Layer', value: 'Penggunaan Lahan', cls: 'accent' },
+                    { label: 'Region', value: p.KABKOT || p.Nama || '—' },
+                    { label: 'Provinsi', value: 'Sumatera Utara' },
+                ],
+                badge: p.Ketarangan,
+                badgeColor: styleFns.penggunaanlahan.colors[p.Ketarangan] || '#666'
+            }),
+            kerapatansungai: (p) => ({
+                tag: 'Kerapatan Sungai',
+                title: p.Keterangan || 'N/A',
+                stats: [
+                    { label: 'Kategori', value: p.Keterangan || '—' },
+                    { label: 'Layer', value: 'Kerapatan Sungai', cls: 'accent' },
+                    { label: 'Region', value: p.KABKOT || p.Nama || '—' },
+                    { label: 'Provinsi', value: 'Sumatera Utara' },
+                ],
+                badge: p.Keterangan,
+                badgeColor: styleFns.kerapatansungai.colors[p.Keterangan] || '#666'
+            })
+        };
 
+        function showPopup(layerKey, properties) {
+            const fn = popupInfoMap[layerKey];
+            if (!fn) return;
+            const info = fn(properties);
+
+            document.getElementById('popup-tag').textContent = info.tag;
+            document.getElementById('popup-title').textContent = info.title;
+
+            const grid = document.getElementById('popup-grid');
+            grid.innerHTML = info.stats.map(s =>
+                `<div class="popup-stat">
+                    <div class="popup-stat-label">${s.label}</div>
+                    <div class="popup-stat-value ${s.cls||''}">${s.value}</div>
+                </div>`
+            ).join('');
+
+            const badgeContainer = document.getElementById('popup-badge-container');
+            if (info.badge) {
+                badgeContainer.innerHTML = `<div class="popup-badge" style="background:${info.badgeColor}22;color:${info.badgeColor};border:1px solid ${info.badgeColor}44">${info.badge}</div>`;
+            } else {
+                badgeContainer.innerHTML = '';
+            }
+
+            popup.classList.add('visible');
+        }
+
+        // ======================================
+        // LAYER MANAGEMENT
+        // ======================================
+        const layerGroups = {};
+        const layerData = {};
+        let activeLayers = new Set(['infiltrasi']);
+
+        function createGeoJSONLayer(key, data) {
+            return L.geoJSON(data, {
+                style: makeStyle(key),
+                onEachFeature: function(feature, layer) {
+                    layer.on({
+                        mouseover: function(e) {
+                            e.target.setStyle({ weight: 1.5, color: 'white', fillOpacity: 0.9 });
+                        },
+                        mouseout: function(e) {
+                            e.target.setStyle({ weight: 0.5, color: 'rgba(255,255,255,0.3)', fillOpacity: 0.75 });
+                        },
+                        click: function(e) {
+                            L.DomEvent.stopPropagation(e);
+                            showPopup(key, feature.properties);
+                        }
+                    });
+                }
+            });
+        }
+
+        const filePaths = {
+            infiltrasi: 'DataSIG/Infiltrasi.geojson',
+            curahhujan: 'DataSIG/CurahHujan.geojson',
+            penggunaanlahan: 'DataSIG/PenggunaanLahan.geojson',
+            kerapatansungai: 'DataSIG/KerapatanSungai.geojson'
+        };
+
+        // Load all layers
+        Object.entries(filePaths).forEach(([key, path]) => {
+            fetch(path)
+                .then(r => r.json())
+                .then(data => {
+                    layerData[key] = data;
+                    const lg = L.layerGroup();
+                    createGeoJSONLayer(key, data).addTo(lg);
+                    layerGroups[key] = lg;
+                    if (activeLayers.has(key)) lg.addTo(map);
+                })
+                .catch(() => {
+                    // Demo: if file not found, still allow toggle UI to work
+                    layerGroups[key] = L.layerGroup();
+                });
+        });
+
+        // ======================================
+        // LAYER BUTTONS
+        // ======================================
+        document.querySelectorAll('.layer-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const key = this.dataset.layer;
+                const isActive = this.classList.contains('active');
+
+                if (isActive) {
+                    this.classList.remove('active');
+                    activeLayers.delete(key);
+                    if (layerGroups[key]) map.removeLayer(layerGroups[key]);
+                } else {
+                    this.classList.add('active');
+                    activeLayers.add(key);
+                    if (layerGroups[key]) layerGroups[key].addTo(map);
+                }
+
+                updateLegend();
+            });
+        });
+
+        // ======================================
+        // LEGEND
+        // ======================================
+        function updateLegend() {
+            const container = document.getElementById('legend-content');
+            const activeKey = [...activeLayers].pop();
+
+            if (!activeKey || !legends[activeKey]) {
+                container.innerHTML = '<div style="color:var(--text-muted);font-size:11px;padding:4px">Pilih layer untuk melihat legenda</div>';
+                return;
+            }
+
+            const leg = legends[activeKey];
+            container.innerHTML = leg.items.map(item =>
+                `<div class="legend-item">
+                    <div class="legend-swatch" style="background:${item.color};color:${item.color}"></div>
+                    <span>${item.label}</span>
+                </div>`
+            ).join('');
+        }
+        updateLegend();
+
+        // Also update legend when layer btn clicked
+        document.querySelectorAll('.layer-btn').forEach(btn => {
+            btn.addEventListener('click', updateLegend);
+        });
+
+        // ======================================
+        // COORDINATES & ZOOM
+        // ======================================
+        map.on('mousemove', function(e) {
+            const lat = e.latlng.lat.toFixed(4);
+            const lng = e.latlng.lng.toFixed(4);
+            const latDir = lat >= 0 ? 'N' : 'S';
+            const lngDir = lng >= 0 ? 'E' : 'W';
+            const str = `${Math.abs(lat)}°${latDir}, ${Math.abs(lng)}°${lngDir}`;
+            document.getElementById('coord-display').textContent = str;
+            document.getElementById('coord-bottom').textContent = str;
+        });
+
+        map.on('zoomend', function() {
+            document.getElementById('zoom-display').textContent = 'Z' + map.getZoom();
+            updateScaleBar();
+        });
+
+        function updateScaleBar() {
+            const z = map.getZoom();
+            const kmPerPx = 40075016.686 * Math.cos(2.5 * Math.PI/180) / Math.pow(2, z+8) / 1000;
+            const totalKm = Math.round(kmPerPx * 160);
+            document.getElementById('scale-label').textContent = totalKm + ' km';
+        }
+        updateScaleBar();
+
+        // Custom zoom buttons
+        document.getElementById('btn-zoomin').onclick = () => map.zoomIn();
+        document.getElementById('btn-zoomout').onclick = () => map.zoomOut();
+
+        // ======================================
+        // LIVE TIME
+        // ======================================
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('live-time').textContent =
+                now.toLocaleTimeString('id-ID', { hour12: false });
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+
+        // Close popup on map click
+        map.on('click', () => popup.classList.remove('visible'));
     </script>
 </body>
 </html>
