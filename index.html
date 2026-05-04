@@ -154,6 +154,27 @@
         .layer-btn.active::before { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
         .layer-btn:hover { transform: translateX(4px); border-color: rgba(100,140,255,0.3); }
 
+        /* Unavailable layer styling */
+        .layer-btn.unavailable {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+        .layer-btn.unavailable:hover {
+            transform: none;
+            border-color: var(--border);
+        }
+
+        .layer-unavail-badge {
+            font-size: 8px;
+            background: rgba(255,107,107,0.15);
+            color: var(--accent3);
+            border: 1px solid rgba(255,107,107,0.3);
+            border-radius: 4px;
+            padding: 1px 5px;
+            letter-spacing: 0.05em;
+            white-space: nowrap;
+        }
+
         .layer-btn.active .layer-label { color: var(--text); }
         .layer-btn .layer-label {
             font-size: 12px;
@@ -524,6 +545,30 @@
             animation: pulse 3s infinite;
         }
 
+        /* ====== LOADING INDICATOR ====== */
+        .loading-chip {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,107,107,0.3);
+            border-radius: 10px;
+            padding: 8px 14px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 9px;
+            color: var(--accent3);
+            letter-spacing: 0.1em;
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+        .loading-chip.show { display: flex; }
+        .loading-dot {
+            width: 5px; height: 5px;
+            border-radius: 50%;
+            background: var(--accent3);
+            box-shadow: 0 0 6px var(--accent3);
+            animation: pulse 1s infinite;
+        }
+
         /* ====== ANIMATIONS ====== */
         @keyframes slideDown {
             from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
@@ -545,10 +590,6 @@
             0%, 100% { opacity: 1; }
             50% { opacity: 0.4; }
         }
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
 
         /* Leaflet overrides */
         .leaflet-control-attribution { display: none; }
@@ -558,25 +599,6 @@
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-        /* Hover tooltip */
-        .hover-info {
-            position: absolute;
-            top: 20px; left: 20px;
-            background: var(--glass);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 10px 16px;
-            font-family: 'Poppins', sans-serif;
-            font-size: 10px;
-            color: var(--text-muted);
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.3s;
-            animation: slideRight 0.7s cubic-bezier(0.16,1,0.3,1) 0.1s both;
-        }
-        .hover-info.show { opacity: 1; }
     </style>
 </head>
 <body>
@@ -610,30 +632,43 @@
         <div class="status-bar">
             <div class="status-chip"><div class="status-dot"></div> LIVE DATA</div>
             <div class="status-chip" id="coord-display">0.0000°N, 0.0000°E</div>
+            <!-- Loading indicator -->
+            <div class="loading-chip" id="loading-chip">
+                <div class="loading-dot"></div>
+                <span id="loading-text">Memuat data...</span>
+            </div>
         </div>
 
         <!-- Left Panel — Layer Controls -->
         <div class="panel-left">
             <div class="panel-title">// Layers</div>
+
+            <!-- RawanBanjir — TERSEDIA (file: DataSIG/RawanBanjir.json) -->
             <div class="layer-btn active" data-layer="RawanBanjir" style="--clr:#fc8d59">
                 <div class="layer-indicator" style="color:#fc8d59"></div>
-                <span class="layer-label">Peta RawanBanjir</span>
+                <span class="layer-label">Peta Rawan Banjir</span>
                 <div class="layer-toggle"></div>
             </div>
-            <div class="layer-btn" data-layer="curahhujan" style="--clr:#8a2be2">
+
+            <!-- Curah Hujan — BELUM TERSEDIA -->
+            <div class="layer-btn unavailable" data-layer="curahhujan" style="--clr:#8a2be2" title="File DataSIG/CurahHujan.geojson belum tersedia">
                 <div class="layer-indicator" style="color:#8a2be2"></div>
                 <span class="layer-label">Curah Hujan</span>
-                <div class="layer-toggle"></div>
+                <span class="layer-unavail-badge">N/A</span>
             </div>
-            <div class="layer-btn" data-layer="penggunaanlahan" style="--clr:#1a9641">
+
+            <!-- Penggunaan Lahan — BELUM TERSEDIA -->
+            <div class="layer-btn unavailable" data-layer="penggunaanlahan" style="--clr:#1a9641" title="File DataSIG/PenggunaanLahan.geojson belum tersedia">
                 <div class="layer-indicator" style="color:#1a9641"></div>
                 <span class="layer-label">Penggunaan Lahan</span>
-                <div class="layer-toggle"></div>
+                <span class="layer-unavail-badge">N/A</span>
             </div>
-            <div class="layer-btn" data-layer="kerapatansungai" style="--clr:#4f8fff">
+
+            <!-- Kerapatan Sungai — BELUM TERSEDIA -->
+            <div class="layer-btn unavailable" data-layer="kerapatansungai" style="--clr:#4f8fff" title="File DataSIG/KerapatanSungai.geojson belum tersedia">
                 <div class="layer-indicator" style="color:#4f8fff"></div>
                 <span class="layer-label">Kerapatan Sungai</span>
-                <div class="layer-toggle"></div>
+                <span class="layer-unavail-badge">N/A</span>
             </div>
         </div>
 
@@ -689,16 +724,11 @@
                     <svg viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <circle cx="26" cy="26" r="24" stroke="rgba(100,140,255,0.2)" stroke-width="1"/>
                         <circle cx="26" cy="26" r="18" stroke="rgba(100,140,255,0.1)" stroke-width="1" stroke-dasharray="2 3"/>
-                        <!-- N arrow (red) -->
                         <polygon points="26,4 22,26 26,24 30,26" fill="#ff6b6b" opacity="0.9"/>
-                        <!-- S arrow -->
                         <polygon points="26,48 22,26 26,28 30,26" fill="rgba(255,255,255,0.3)"/>
-                        <!-- E W ticks -->
                         <line x1="48" y1="26" x2="44" y2="26" stroke="rgba(100,140,255,0.5)" stroke-width="1.5"/>
                         <line x1="4" y1="26" x2="8" y2="26" stroke="rgba(100,140,255,0.5)" stroke-width="1.5"/>
-                        <!-- Center dot -->
                         <circle cx="26" cy="26" r="3" fill="white" opacity="0.8"/>
-                        <!-- Labels -->
                         <text x="26" y="12" text-anchor="middle" fill="#ff6b6b" font-size="7" font-family="Poppins" font-weight="700">N</text>
                         <text x="26" y="46" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="6" font-family="Poppins">S</text>
                         <text x="46" y="28" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="6" font-family="Poppins">E</text>
@@ -721,7 +751,8 @@
 
     <script>
         // ======================================
-        // MAP INIT
+        // MAP INIT — Sumatera Utara
+        // Pusat koordinat: ~2.5°N, 99.0°E (Sumatera Utara)
         // ======================================
         var map = L.map('map', { zoomControl: false, attributionControl: false })
                    .setView([2.5, 99.0], 7);
@@ -729,11 +760,30 @@
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
         // ======================================
+        // FILE PATH — Disesuaikan dengan struktur DataSIG yang ada
+        // Hanya RawanBanjir.json yang tersedia di folder DataSIG
+        // ======================================
+        const filePaths = {
+            RawanBanjir:      'DataSIG/RawanBanjir.json',      // ✅ TERSEDIA
+            curahhujan:       'DataSIG/CurahHujan.geojson',    // ❌ Belum ada (N/A)
+            penggunaanlahan:  'DataSIG/PenggunaanLahan.geojson', // ❌ Belum ada (N/A)
+            kerapatansungai:  'DataSIG/KerapatanSungai.geojson'  // ❌ Belum ada (N/A)
+        };
+
+        // Flag layer yang tersedia
+        const layerAvailable = {
+            RawanBanjir:      true,
+            curahhujan:       false,
+            penggunaanlahan:  false,
+            kerapatansungai:  false
+        };
+
+        // ======================================
         // LEGEND DATA
         // ======================================
         const legends = {
             RawanBanjir: {
-                label: 'Peta RawanBanjir',
+                label: 'Peta Rawan Banjir',
                 items: [
                     { color: '#d73027', label: 'Besar' },
                     { color: '#fc8d59', label: 'Agak Besar' },
@@ -776,32 +826,83 @@
 
         // ======================================
         // STYLE FUNCTIONS
+        // Properti disesuaikan dengan struktur GeoJSON RawanBanjir.json
         // ======================================
         const styleFns = {
             RawanBanjir: {
-                prop: 'RawanBanjir',
-                colors: { 'Besar':'#d73027','Agak Besar':'#fc8d59','Sedang':'#fee08b','Agak Kecil':'#d9ef8b','Kecil':'#91cf60' }
+                // Coba beberapa kemungkinan nama properti yang umum dalam GeoJSON banjir
+                // (akan dideteksi otomatis saat data pertama kali dimuat)
+                prop: null, // akan diisi otomatis
+                colors: {
+                    'Besar':      '#d73027',
+                    'Agak Besar': '#fc8d59',
+                    'Sedang':     '#fee08b',
+                    'Agak Kecil': '#d9ef8b',
+                    'Kecil':      '#91cf60'
+                },
+                // Fallback: cari properti yang relevan
+                propCandidates: ['RawanBanjir', 'RAWAN_BAN', 'KELAS', 'Kelas', 'kelas',
+                                  'Keterangan', 'KETERANGAN', 'kategori', 'KATEGORI',
+                                  'CLASS', 'class', 'value', 'VALUE', 'gridcode']
             },
             curahhujan: {
                 prop: 'Keterangan',
-                colors: { 'Sangat Rendah':'#00ffff','Rendah':'#0000ff','Sedang':'#8a2be2','Tinggi':'#ff00ff','Sangat Tinggi':'#8b008b' }
+                colors: { 'Sangat Rendah':'#00ffff','Rendah':'#0000ff','Sedang':'#8a2be2','Tinggi':'#ff00ff','Sangat Tinggi':'#8b008b' },
+                propCandidates: ['Keterangan','KETERANGAN','keterangan']
             },
             penggunaanlahan: {
-                prop: 'Ketarangan',
-                colors: { 'Sangat Baik':'#1a9641','Baik':'#a6d96a','Sedang':'#ffffbf','Kurang Baik':'#fdae61','Sangat Kurang Baik':'#d7191c' }
+                prop: 'Keterangan',
+                colors: { 'Sangat Baik':'#1a9641','Baik':'#a6d96a','Sedang':'#ffffbf','Kurang Baik':'#fdae61','Sangat Kurang Baik':'#d7191c' },
+                propCandidates: ['Keterangan','Ketarangan','KETERANGAN','keterangan']
             },
             kerapatansungai: {
                 prop: 'Keterangan',
-                colors: { 'Sangat Baik':'#1a9641','Baik':'#a6d96a','Sedang':'#ffffbf','Kurang Baik':'#fdae61','Sangat Kurang Baik':'#d7191c' }
+                colors: { 'Sangat Baik':'#1a9641','Baik':'#a6d96a','Sedang':'#ffffbf','Kurang Baik':'#fdae61','Sangat Kurang Baik':'#d7191c' },
+                propCandidates: ['Keterangan','KETERANGAN','keterangan']
             }
         };
+
+        /**
+         * Deteksi otomatis properti klasifikasi dari fitur GeoJSON pertama.
+         * Cocokkan berdasarkan kandidat nama properti, lalu fallback ke properti string apapun.
+         */
+        function detectProp(layerKey, sampleProperties) {
+            const cfg = styleFns[layerKey];
+            const keys = Object.keys(sampleProperties);
+            console.log('[WebGIS] Properties detected for', layerKey, ':', keys);
+
+            // 1. Cek kandidat yang sudah didefinisikan
+            for (const c of cfg.propCandidates) {
+                if (keys.includes(c)) {
+                    console.log('[WebGIS] Matched prop:', c);
+                    return c;
+                }
+            }
+            // 2. Coba cari nilai yang cocok dengan warna yang ada
+            for (const k of keys) {
+                const val = sampleProperties[k];
+                if (cfg.colors[val]) {
+                    console.log('[WebGIS] Value match found, prop:', k, 'val:', val);
+                    return k;
+                }
+            }
+            // 3. Gunakan properti string pertama sebagai fallback
+            for (const k of keys) {
+                if (typeof sampleProperties[k] === 'string') {
+                    console.warn('[WebGIS] Fallback prop:', k);
+                    return k;
+                }
+            }
+            return keys[0] || null;
+        }
 
         function makeStyle(layerKey) {
             return function(feature) {
                 const cfg = styleFns[layerKey];
-                const val = feature.properties[cfg.prop];
+                const prop = cfg.prop;
+                const val = prop ? feature.properties[prop] : null;
                 return {
-                    fillColor: cfg.colors[val] || '#cccccc',
+                    fillColor: (val && cfg.colors[val]) ? cfg.colors[val] : '#cccccc',
                     weight: 0.5,
                     opacity: 0.3,
                     color: 'rgba(255,255,255,0.3)',
@@ -812,82 +913,43 @@
 
         // ======================================
         // POPUP INFO
+        // Menampilkan semua properti yang ada pada fitur
         // ======================================
         const popup = document.getElementById('info-popup');
         const popupClose = document.getElementById('popup-close');
-
         popupClose.onclick = () => popup.classList.remove('visible');
 
-        const popupInfoMap = {
-            RawanBanjir: (p) => ({
-                tag: 'Peta RawanBanjir',
-                title: p.RawanBanjir || 'N/A',
-                stats: [
-                    { label: 'Kelas', value: p.RawanBanjir || '—' },
-                    { label: 'Layer', value: 'RawanBanjir', cls: 'accent' },
-                    { label: 'Region', value: p.KABKOT || p.Nama || '—' },
-                    { label: 'Provinsi', value: 'Sumatera Utara' },
-                ],
-                badge: p.RawanBanjir,
-                badgeColor: styleFns.RawanBanjir.colors[p.RawanBanjir] || '#666'
-            }),
-            curahhujan: (p) => ({
-                tag: 'Curah Hujan',
-                title: p.Keterangan || 'N/A',
-                stats: [
-                    { label: 'Kategori', value: p.Keterangan || '—' },
-                    { label: 'Layer', value: 'Curah Hujan', cls: 'accent' },
-                    { label: 'Region', value: p.KABKOT || p.Nama || '—' },
-                    { label: 'Provinsi', value: 'Sumatera Utara' },
-                ],
-                badge: p.Keterangan,
-                badgeColor: styleFns.curahhujan.colors[p.Keterangan] || '#666'
-            }),
-            penggunaanlahan: (p) => ({
-                tag: 'Penggunaan Lahan',
-                title: p.Keterangan || 'N/A',
-                stats: [
-                    { label: 'Kategori', value: p.Keterangan || '—' },
-                    { label: 'Layer', value: 'Penggunaan Lahan', cls: 'accent' },
-                    { label: 'Region', value: p.KABKOT || p.Nama || '—' },
-                    { label: 'Provinsi', value: 'Sumatera Utara' },
-                ],
-                badge: p.Keterangan,
-                badgeColor: styleFns.penggunaanlahan.colors[p.Keterangan] || '#666'
-            }),
-            kerapatansungai: (p) => ({
-                tag: 'Kerapatan Sungai',
-                title: p.Keterangan || 'N/A',
-                stats: [
-                    { label: 'Kategori', value: p.Keterangan || '—' },
-                    { label: 'Layer', value: 'Kerapatan Sungai', cls: 'accent' },
-                    { label: 'Region', value: p.KABKOT || p.Nama || '—' },
-                    { label: 'Provinsi', value: 'Sumatera Utara' },
-                ],
-                badge: p.Keterangan,
-                badgeColor: styleFns.kerapatansungai.colors[p.Keterangan] || '#666'
-            })
-        };
-
         function showPopup(layerKey, properties) {
-            const fn = popupInfoMap[layerKey];
-            if (!fn) return;
-            const info = fn(properties);
+            const cfg = styleFns[layerKey];
+            const prop = cfg.prop;
+            const val = prop ? (properties[prop] || 'N/A') : 'N/A';
+            const badgeColor = cfg.colors[val] || '#666';
 
-            document.getElementById('popup-tag').textContent = info.tag;
-            document.getElementById('popup-title').textContent = info.title;
+            // Header popup
+            document.getElementById('popup-tag').textContent = legends[layerKey]
+                ? legends[layerKey].label : layerKey;
+            document.getElementById('popup-title').textContent = val;
 
+            // Tampilkan semua properties yang ada dalam grid
+            const propEntries = Object.entries(properties).filter(([k, v]) => v !== null && v !== undefined && v !== '');
             const grid = document.getElementById('popup-grid');
-            grid.innerHTML = info.stats.map(s =>
+
+            // Batasi maks 6 entri agar tidak overflow
+            const shown = propEntries.slice(0, 6);
+            grid.innerHTML = shown.map(([k, v]) =>
                 `<div class="popup-stat">
-                    <div class="popup-stat-label">${s.label}</div>
-                    <div class="popup-stat-value ${s.cls||''}">${s.value}</div>
+                    <div class="popup-stat-label">${k}</div>
+                    <div class="popup-stat-value ${k === prop ? 'accent2' : ''}" 
+                         title="${v}" style="font-size:${String(v).length > 12 ? '10px' : '14px'}">
+                         ${String(v).length > 20 ? String(v).substring(0, 18) + '…' : v}
+                    </div>
                 </div>`
             ).join('');
 
+            // Badge warna kategori
             const badgeContainer = document.getElementById('popup-badge-container');
-            if (info.badge) {
-                badgeContainer.innerHTML = `<div class="popup-badge" style="background:${info.badgeColor}22;color:${info.badgeColor};border:1px solid ${info.badgeColor}44">${info.badge}</div>`;
+            if (val && val !== 'N/A') {
+                badgeContainer.innerHTML = `<div class="popup-badge" style="background:${badgeColor}22;color:${badgeColor};border:1px solid ${badgeColor}44">${val}</div>`;
             } else {
                 badgeContainer.innerHTML = '';
             }
@@ -899,8 +961,16 @@
         // LAYER MANAGEMENT
         // ======================================
         const layerGroups = {};
-        const layerData = {};
         let activeLayers = new Set(['RawanBanjir']);
+
+        function showLoading(text) {
+            const chip = document.getElementById('loading-chip');
+            document.getElementById('loading-text').textContent = text;
+            chip.classList.add('show');
+        }
+        function hideLoading() {
+            document.getElementById('loading-chip').classList.remove('show');
+        }
 
         function createGeoJSONLayer(key, data) {
             return L.geoJSON(data, {
@@ -922,36 +992,71 @@
             });
         }
 
-        const filePaths = {
-            RawanBanjir: 'DataSIG/KOTA_Semarang_EXPORT.json',
-            curahhujan: 'DataSIG/CurahHujan.geojson',
-            penggunaanlahan: 'DataSIG/PenggunaanLahan.geojson',
-            kerapatansungai: 'DataSIG/KerapatanSungai.geojson'
-        };
+        /**
+         * Muat layer dari file.
+         * Hanya memuat layer yang tersedia (layerAvailable === true).
+         */
+        function loadLayer(key) {
+            if (!layerAvailable[key]) {
+                // Buat layer grup kosong agar toggle UI tetap berfungsi tanpa error
+                layerGroups[key] = L.layerGroup();
+                return;
+            }
 
-        // Load all layers
-        Object.entries(filePaths).forEach(([key, path]) => {
-            fetch(path)
-                .then(r => r.json())
+            showLoading('Memuat ' + key + '...');
+
+            fetch(filePaths[key])
+                .then(r => {
+                    if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + filePaths[key]);
+                    return r.json();
+                })
                 .then(data => {
-                    layerData[key] = data;
+                    // Deteksi properti klasifikasi secara otomatis
+                    if (data.features && data.features.length > 0) {
+                        const sampleProps = data.features[0].properties;
+                        if (!styleFns[key].prop) {
+                            styleFns[key].prop = detectProp(key, sampleProps);
+                        }
+                        console.log('[WebGIS]', key, 'menggunakan properti:', styleFns[key].prop);
+                    }
+
                     const lg = L.layerGroup();
                     createGeoJSONLayer(key, data).addTo(lg);
                     layerGroups[key] = lg;
+
                     if (activeLayers.has(key)) lg.addTo(map);
+
+                    // Fit bounds ke data jika layer pertama
+                    if (key === 'RawanBanjir' && data.features && data.features.length > 0) {
+                        try {
+                            const bounds = L.geoJSON(data).getBounds();
+                            if (bounds.isValid()) map.fitBounds(bounds, { padding: [40, 40] });
+                        } catch(e) { /* abaikan */ }
+                    }
+
+                    hideLoading();
                 })
-                .catch(() => {
-                    // Demo: if file not found, still allow toggle UI to work
-                    layerGroups[key] = L.layerGroup();
+                .catch(err => {
+                    console.error('[WebGIS] Gagal memuat', key, ':', err.message);
+                    layerGroups[key] = L.layerGroup(); // kosong, UI tetap jalan
+                    hideLoading();
                 });
-        });
+        }
+
+        // Muat semua layer (hanya yang tersedia yang akan benar-benar di-fetch)
+        Object.keys(filePaths).forEach(key => loadLayer(key));
 
         // ======================================
         // LAYER BUTTONS
+        // Tombol yang unavailable tidak bisa diklik
         // ======================================
         document.querySelectorAll('.layer-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 const key = this.dataset.layer;
+
+                // Blokir interaksi jika layer tidak tersedia
+                if (!layerAvailable[key]) return;
+
                 const isActive = this.classList.contains('active');
 
                 if (isActive) {
@@ -973,7 +1078,10 @@
         // ======================================
         function updateLegend() {
             const container = document.getElementById('legend-content');
-            const activeKey = [...activeLayers].pop();
+
+            // Tampilkan legenda dari layer aktif yang tersedia
+            const activeAvailable = [...activeLayers].filter(k => layerAvailable[k]);
+            const activeKey = activeAvailable.pop();
 
             if (!activeKey || !legends[activeKey]) {
                 container.innerHTML = '<div style="color:var(--text-muted);font-size:11px;padding:4px">Pilih layer untuk melihat legenda</div>';
@@ -989,11 +1097,6 @@
             ).join('');
         }
         updateLegend();
-
-        // Also update legend when layer btn clicked
-        document.querySelectorAll('.layer-btn').forEach(btn => {
-            btn.addEventListener('click', updateLegend);
-        });
 
         // ======================================
         // COORDINATES & ZOOM
@@ -1021,7 +1124,6 @@
         }
         updateScaleBar();
 
-        // Custom zoom buttons
         document.getElementById('btn-zoomin').onclick = () => map.zoomIn();
         document.getElementById('btn-zoomout').onclick = () => map.zoomOut();
 
