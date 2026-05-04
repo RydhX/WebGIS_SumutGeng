@@ -615,9 +615,9 @@
         <!-- Left Panel — Layer Controls -->
         <div class="panel-left">
             <div class="panel-title">// Layers</div>
-            <div class="layer-btn active" data-layer="infiltrasi" style="--clr:#fc8d59">
+            <div class="layer-btn active" data-layer="RawanBanjir" style="--clr:#fc8d59">
                 <div class="layer-indicator" style="color:#fc8d59"></div>
-                <span class="layer-label">Peta Infiltrasi</span>
+                <span class="layer-label">Peta RawanBanjir</span>
                 <div class="layer-toggle"></div>
             </div>
             <div class="layer-btn" data-layer="curahhujan" style="--clr:#8a2be2">
@@ -732,8 +732,8 @@
         // LEGEND DATA
         // ======================================
         const legends = {
-            infiltrasi: {
-                label: 'Peta Infiltrasi',
+            RawanBanjir: {
+                label: 'Peta RawanBanjir',
                 items: [
                     { color: '#d73027', label: 'Besar' },
                     { color: '#fc8d59', label: 'Agak Besar' },
@@ -778,8 +778,8 @@
         // STYLE FUNCTIONS
         // ======================================
         const styleFns = {
-            infiltrasi: {
-                prop: 'Infiltrasi',
+            RawanBanjir: {
+                prop: 'RawanBanjir',
                 colors: { 'Besar':'#d73027','Agak Besar':'#fc8d59','Sedang':'#fee08b','Agak Kecil':'#d9ef8b','Kecil':'#91cf60' }
             },
             curahhujan: {
@@ -819,17 +819,17 @@
         popupClose.onclick = () => popup.classList.remove('visible');
 
         const popupInfoMap = {
-            infiltrasi: (p) => ({
-                tag: 'Peta Infiltrasi',
-                title: p.Infiltrasi || 'N/A',
+            RawanBanjir: (p) => ({
+                tag: 'Peta RawanBanjir',
+                title: p.RawanBanjir || 'N/A',
                 stats: [
-                    { label: 'Kelas', value: p.Infiltrasi || '—' },
-                    { label: 'Layer', value: 'Infiltrasi', cls: 'accent' },
+                    { label: 'Kelas', value: p.RawanBanjir || '—' },
+                    { label: 'Layer', value: 'RawanBanjir', cls: 'accent' },
                     { label: 'Region', value: p.KABKOT || p.Nama || '—' },
                     { label: 'Provinsi', value: 'Sumatera Utara' },
                 ],
-                badge: p.Infiltrasi,
-                badgeColor: styleFns.infiltrasi.colors[p.Infiltrasi] || '#666'
+                badge: p.RawanBanjir,
+                badgeColor: styleFns.RawanBanjir.colors[p.RawanBanjir] || '#666'
             }),
             curahhujan: (p) => ({
                 tag: 'Curah Hujan',
@@ -845,15 +845,15 @@
             }),
             penggunaanlahan: (p) => ({
                 tag: 'Penggunaan Lahan',
-                title: p.Ketarangan || 'N/A',
+                title: p.Keterangan || 'N/A',
                 stats: [
-                    { label: 'Kategori', value: p.Ketarangan || '—' },
+                    { label: 'Kategori', value: p.Keterangan || '—' },
                     { label: 'Layer', value: 'Penggunaan Lahan', cls: 'accent' },
                     { label: 'Region', value: p.KABKOT || p.Nama || '—' },
                     { label: 'Provinsi', value: 'Sumatera Utara' },
                 ],
-                badge: p.Ketarangan,
-                badgeColor: styleFns.penggunaanlahan.colors[p.Ketarangan] || '#666'
+                badge: p.Keterangan,
+                badgeColor: styleFns.penggunaanlahan.colors[p.Keterangan] || '#666'
             }),
             kerapatansungai: (p) => ({
                 tag: 'Kerapatan Sungai',
@@ -900,7 +900,7 @@
         // ======================================
         const layerGroups = {};
         const layerData = {};
-        let activeLayers = new Set(['infiltrasi']);
+        let activeLayers = new Set(['RawanBanjir']);
 
         function createGeoJSONLayer(key, data) {
             return L.geoJSON(data, {
@@ -923,7 +923,7 @@
         }
 
         const filePaths = {
-            infiltrasi: 'DataSIG/Infiltrasi.geojson',
+            RawanBanjir: 'DataSIG/KOTA_Semarang_EXPORT.json',
             curahhujan: 'DataSIG/CurahHujan.geojson',
             penggunaanlahan: 'DataSIG/PenggunaanLahan.geojson',
             kerapatansungai: 'DataSIG/KerapatanSungai.geojson'
