@@ -8,342 +8,418 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet Providers for basemap options -->
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-providers@1.13.0/leaflet-providers.js"></script>
 
     <style>
         :root {
-            --bg: #0a0d12;
-            --surface: #111520;
-            --surface2: #161c2d;
-            --border: rgba(100,140,255,0.15);
-            --accent: #4f8fff;
-            --accent2: #00d4aa;
-            --accent3: #ff6b6b;
-            --text: #e8edf8;
-            --text-muted: #6b7a99;
-            --glass: rgba(17, 21, 32, 0.85);
-            --glow: rgba(79,143,255,0.25);
+            --bg: #ffffff;
+            --surface: #ffffff;
+            --surface2: #f8f9fa;
+            --border: rgba(0,0,0,0.06);
+            --border-strong: rgba(0,0,0,0.12);
+            --accent: #1a73e8; /* Google Blue */
+            --accent-soft: #e8f0fe;
+            --accent2: #1e8e3e;
+            --accent3: #d93025;
+            --text: #202124;
+            --text-muted: #5f6368;
+            --text-hint: #9aa0a6;
+            --shadow-sm: 0 2px 6px rgba(0,0,0,0.04);
+            --shadow-md: 0 6px 16px rgba(0,0,0,0.06);
+            --shadow-lg: 0 12px 32px rgba(0,0,0,0.08);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             background: var(--bg);
-            font-family: 'Poppins', sans-serif;
+            font-family: 'DM Sans', sans-serif;
             color: var(--text);
+            margin: 0;
+            padding: 0;
             overflow: hidden;
-            height: 100vh;
+            transition: background 0.3s ease, color 0.3s ease;
         }
 
-        /* ====== MAP ====== */
+        /* ── MAP ── */
         #map {
-            height: 100vh;
-            width: 100vw;
-            position: absolute;
-            top: 0; left: 0;
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            position: relative;
             z-index: 1;
-            filter: brightness(0.85) saturate(1.1);
         }
 
-        /* Dark tile override */
-        .leaflet-tile { filter: invert(1) hue-rotate(200deg) brightness(0.75) saturate(0.8); }
-
-        /* ====== OVERLAY CONTAINER ====== */
-        .overlay {
+        #page-map #map {
             position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
+            top: 0;
+            left: 0;
+        }
+
+        /* ── OVERLAY ── */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             z-index: 1000;
             pointer-events: none;
+            display: none;
         }
+
+        #page-map.active .overlay {
+            display: block;
+        }
+
         .overlay > * { pointer-events: all; }
 
-        /* ====== TOP HEADER BAR ====== */
-        .header {
-            position: absolute;
-            top: 20px; left: 50%;
-            transform: translateX(-50%);
-            background: var(--glass);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 12px 28px;
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            animation: slideDown 0.7s cubic-bezier(0.16,1,0.3,1) both;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px var(--border);
-        }
-
-        .header-dot {
-            width: 8px; height: 8px;
-            border-radius: 50%;
-            background: var(--accent);
-            box-shadow: 0 0 10px var(--accent);
-            animation: pulse 2s infinite;
-        }
-
-        .header h1 {
-            font-family: 'Poppins', sans-serif;
-            font-size: 15px;
-            font-weight: 800;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            color: var(--text);
-        }
-
-        .header-divider {
-            width: 1px; height: 20px;
-            background: var(--border);
-        }
-
-        .header-meta {
-            font-family: 'Poppins', sans-serif;
-            font-size: 10px;
-            color: var(--text-muted);
-            letter-spacing: 0.08em;
-        }
-
-        /* ====== LEFT PANEL — LAYER CONTROL ====== */
-        .panel-left {
-            position: absolute;
-            left: 20px; top: 50%;
-            transform: translateY(-50%);
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            animation: slideRight 0.8s cubic-bezier(0.16,1,0.3,1) 0.2s both;
-        }
-
-        .panel-title {
-            font-family: 'Poppins', sans-serif;
-            font-size: 9px;
-            letter-spacing: 0.2em;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            padding: 0 4px;
-            margin-bottom: 4px;
-        }
-
-        .layer-btn {
-            position: relative;
-            background: var(--glass);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 14px 18px;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+        /* ── GLOBAL HEADER (Light Theme) ── */
+        .header-brand {
             display: flex;
             align-items: center;
             gap: 12px;
-            min-width: 200px;
-            overflow: hidden;
+            animation: fadeIn 0.5s ease both;
+        }
+        .header-brand svg {
+            width: 22px; height: 22px;
+            fill: var(--accent);
+            transition: transform 0.3s ease;
+        }
+        .header-brand:hover svg {
+            transform: scale(1.1) rotate(5deg);
+        }
+        .header-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text);
+            letter-spacing: -0.01em;
+        }
+        .header-nav {
+            display: flex;
+            height: 100%;
+            animation: fadeIn 0.5s ease 0.1s both;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: fadeIn 0.5s ease 0.2s both;
+        }
+        .header-time {
+            font-family: 'DM Mono', monospace;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+            background: var(--surface2);
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+        .header-time:hover {
+            box-shadow: var(--shadow-sm);
+            transform: translateY(-1px);
+        }
+        .live-badge {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 11px; font-weight: 600;
+            color: #0d9488;
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            border-radius: 12px;
+            padding: 5px 12px;
+            transition: all 0.3s ease;
+        }
+        .live-badge:hover {
+            box-shadow: var(--shadow-sm);
+            transform: translateY(-1px);
+        }
+        .live-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: blink 2s infinite;
         }
 
-        .layer-btn::before {
-            content: '';
+        /* ── STATUS PANEL TOP RIGHT ── */
+        .status-bar {
             position: absolute;
-            left: 0; top: 0; bottom: 0;
-            width: 3px;
-            border-radius: 0 2px 2px 0;
-            transition: all 0.3s;
+            top: 16px; right: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            animation: fadeLeft 0.5s ease 0.1s both;
         }
 
-        .layer-btn.active { border-color: rgba(100,140,255,0.4); background: rgba(17,21,32,0.95); }
-        .layer-btn.active::before { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
-        .layer-btn:hover { transform: translateX(4px); border-color: rgba(100,140,255,0.3); }
+        .status-chip {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 8px 12px;
+            font-size: 11px;
+            color: var(--text-muted);
+            font-family: 'DM Mono', monospace;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s ease;
+        }
+        .status-chip:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
 
-        /* Unavailable layer styling */
+        .status-chip.coord {
+            color: var(--accent2);
+            font-weight: 500;
+        }
+
+        .loading-chip {
+            background: var(--surface);
+            border: 1px solid #fcd34d;
+            border-radius: 10px;
+            padding: 8px 12px;
+            font-size: 11px;
+            color: #92400e;
+            display: none;
+            align-items: center;
+            gap: 6px;
+            box-shadow: var(--shadow-sm);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+        }
+        .loading-chip.show { display: flex; }
+        .loading-spin {
+            width: 10px; height: 10px;
+            border: 1.5px solid #fcd34d;
+            border-top-color: #92400e;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        /* ── LEFT PANEL ── */
+        .panel-left {
+            position: absolute;
+            left: 16px; top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            animation: fadeRight 0.5s ease 0.15s both;
+        }
+
+        .panel-section-label {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--text-hint);
+            padding: 0 4px;
+            margin-bottom: 2px;
+        }
+
+        .layer-btn {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 220px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .layer-btn:hover:not(.unavailable) {
+            border-color: var(--border-strong);
+            box-shadow: var(--shadow-md);
+            transform: translateX(4px);
+        }
+
+        .layer-btn.active {
+            border-color: var(--accent);
+            background: var(--accent-soft);
+        }
+
         .layer-btn.unavailable {
-            opacity: 0.45;
+            opacity: 0.5;
             cursor: not-allowed;
         }
-        .layer-btn.unavailable:hover {
-            transform: none;
-            border-color: var(--border);
-        }
 
-        .layer-unavail-badge {
-            font-size: 8px;
-            background: rgba(255,107,107,0.15);
-            color: var(--accent3);
-            border: 1px solid rgba(255,107,107,0.3);
-            border-radius: 4px;
-            padding: 1px 5px;
-            letter-spacing: 0.05em;
-            white-space: nowrap;
-        }
-
-        .layer-btn.active .layer-label { color: var(--text); }
-        .layer-btn .layer-label {
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-muted);
-            transition: color 0.3s;
-            flex: 1;
-        }
-
-        .layer-indicator {
+        .layer-dot {
             width: 10px; height: 10px;
             border-radius: 50%;
-            border: 2px solid currentColor;
-            transition: all 0.3s;
             flex-shrink: 0;
+            border: 2px solid currentColor;
+            transition: all 0.3s ease;
         }
-        .layer-btn.active .layer-indicator {
+        .layer-btn.active .layer-dot {
             background: currentColor;
-            box-shadow: 0 0 8px currentColor;
+            transform: scale(1.1);
+        }
+
+        .layer-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+            flex: 1;
+            transition: color 0.3s ease;
+        }
+        .layer-btn.active .layer-label {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .layer-na {
+            font-size: 9px;
+            font-weight: 600;
+            color: var(--text-hint);
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 2px 6px;
         }
 
         .layer-toggle {
             width: 32px; height: 18px;
             border-radius: 9px;
-            background: var(--surface2);
+            background: #e5e7eb;
             position: relative;
             flex-shrink: 0;
-            transition: background 0.3s;
+            transition: background 0.3s ease;
         }
         .layer-toggle::after {
             content: '';
             position: absolute;
             width: 12px; height: 12px;
             border-radius: 50%;
-            background: var(--text-muted);
+            background: white;
             top: 3px; left: 3px;
-            transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
         }
         .layer-btn.active .layer-toggle { background: var(--accent); }
-        .layer-btn.active .layer-toggle::after {
-            background: white;
-            left: 17px;
-            box-shadow: 0 0 6px rgba(79,143,255,0.6);
-        }
+        .layer-btn.active .layer-toggle::after { left: 17px; transform: scale(1.1); }
 
-        /* ====== RIGHT PANEL — LEGEND ====== */
+        /* ── RIGHT PANEL — LEGEND ── */
         .panel-right {
             position: absolute;
-            right: 20px; top: 50%;
+            right: 16px; top: 50%;
             transform: translateY(-50%);
-            background: var(--glass);
-            backdrop-filter: blur(20px);
+            background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 20px;
+            border-radius: 14px;
+            padding: 18px;
             min-width: 200px;
-            animation: slideLeft 0.8s cubic-bezier(0.16,1,0.3,1) 0.3s both;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            box-shadow: var(--shadow-md);
+            animation: fadeLeft 0.5s ease 0.2s both;
+            transition: all 0.3s ease;
+        }
+        .panel-right:hover {
+            box-shadow: var(--shadow-lg);
         }
 
-        .legend-title {
-            font-family: 'Poppins', sans-serif;
-            font-size: 9px;
-            letter-spacing: 0.2em;
-            color: var(--text-muted);
+        .legend-heading {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
             text-transform: uppercase;
+            color: var(--text-hint);
             margin-bottom: 14px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            display: flex; align-items: center; gap: 8px;
         }
-
-        .legend-title::after {
+        .legend-heading::after {
             content: '';
-            flex: 1;
-            height: 1px;
+            flex: 1; height: 1px;
             background: var(--border);
         }
 
         #legend-content { display: flex; flex-direction: column; gap: 8px; }
 
         .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            display: flex; align-items: center; gap: 10px;
             font-size: 12px;
-            font-weight: 600;
+            font-weight: 500;
             color: var(--text-muted);
-            transition: all 0.3s;
             padding: 4px 6px;
-            border-radius: 6px;
-            cursor: default;
+            border-radius: 8px;
+            transition: all 0.2s ease;
         }
-        .legend-item:hover { background: rgba(255,255,255,0.04); color: var(--text); }
+        .legend-item:hover { 
+            background: var(--surface2); 
+            color: var(--text); 
+            transform: translateX(2px);
+        }
 
         .legend-swatch {
             width: 14px; height: 14px;
             border-radius: 4px;
             flex-shrink: 0;
-            box-shadow: 0 0 6px currentColor;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
 
-        /* ====== BOTTOM BAR — MAP ELEMENTS ====== */
+        /* ── BOTTOM BAR ── */
         .bottom-bar {
             position: absolute;
-            bottom: 20px; left: 50%;
+            bottom: 16px; left: 50%;
             transform: translateX(-50%);
             display: flex;
             align-items: center;
-            gap: 12px;
-            animation: slideUp 0.8s cubic-bezier(0.16,1,0.3,1) 0.4s both;
+            gap: 10px;
+            animation: fadeUp 0.5s ease 0.25s both;
         }
 
-        .map-widget {
-            background: var(--glass);
-            backdrop-filter: blur(20px);
+        .widget {
+            background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 10px 16px;
             display: flex;
             align-items: center;
             gap: 10px;
-            font-family: 'Poppins', sans-serif;
-            font-size: 10px;
+            box-shadow: var(--shadow-sm);
+            font-size: 11px;
             color: var(--text-muted);
-            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .widget:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--border-strong);
         }
 
-        /* Scale bar */
-        .scale-widget { flex-direction: column; gap: 4px; }
-        .scale-bar {
-            display: flex;
-            align-items: flex-end;
-            gap: 0;
+        /* Projection */
+        .widget-proj { flex-direction: column; gap: 2px; align-items: flex-start; }
+        .widget-proj .label { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-hint); }
+        .widget-proj .val { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 600; color: var(--text); }
+
+        /* Scale */
+        .widget-scale { flex-direction: column; gap: 6px; align-items: flex-start; }
+        .scale-track {
+            display: flex; height: 4px;
+            border-radius: 2px; overflow: hidden;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
         }
-        .scale-seg {
-            height: 6px;
-            border: 1px solid var(--text-muted);
-            border-right: none;
-        }
-        .scale-seg:last-child { border-right: 1px solid var(--text-muted); }
+        .scale-seg { flex: 1; }
         .scale-seg:nth-child(odd) { background: var(--text-muted); }
-        .scale-labels {
-            display: flex;
-            justify-content: space-between;
-            font-size: 8px;
-        }
+        .scale-seg:nth-child(even) { background: var(--border-strong); }
+        .scale-labels { display: flex; justify-content: space-between; font-size: 10px; font-weight: 500; font-family: 'DM Mono', monospace; width: 100%; color: var(--text); }
 
-        /* Coordinates */
-        .coord-icon {
-            width: 6px; height: 6px;
+        /* Coord */
+        .widget-coord .coord-dot {
+            width: 8px; height: 8px;
             border-radius: 50%;
             background: var(--accent2);
-            box-shadow: 0 0 8px var(--accent2);
-            animation: pulse 2s infinite;
+            animation: blink 2s infinite;
+            box-shadow: 0 0 0 2px rgba(30, 142, 62, 0.2);
         }
-
-        /* Compass */
-        .compass-widget {
-            padding: 10px;
-        }
-        .compass-rose {
-            width: 52px; height: 52px;
-            position: relative;
-        }
-        .compass-rose svg { width: 100%; height: 100%; }
+        .widget-coord #coord-bottom { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 600; color: var(--text); }
 
         /* Zoom */
-        .zoom-widget { flex-direction: column; gap: 2px; align-items: center; padding: 8px 10px; }
+        .widget-zoom { flex-direction: column; gap: 4px; align-items: center; padding: 8px 12px; }
         .zoom-btn {
             width: 24px; height: 24px;
             background: var(--surface2);
@@ -352,97 +428,80 @@
             display: flex; align-items: center; justify-content: center;
             cursor: pointer;
             font-size: 16px;
+            font-weight: 500;
             color: var(--text-muted);
-            transition: all 0.2s;
+            transition: all 0.2s ease;
             line-height: 1;
+            user-select: none;
         }
-        .zoom-btn:hover { background: var(--surface); color: var(--text); border-color: var(--accent); }
-        .zoom-level {
-            font-size: 9px;
-            letter-spacing: 0.1em;
-            padding: 2px 0;
-        }
+        .zoom-btn:hover { background: var(--surface); color: var(--text); border-color: var(--text-hint); transform: scale(1.05); }
+        .zoom-level { font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 600; color: var(--text-hint); }
 
-        /* Grid projection badge */
-        .proj-widget {
-            flex-direction: column;
-            gap: 2px;
-            align-items: flex-start;
-        }
-        .proj-label {
-            font-size: 8px;
-            color: var(--text-muted);
-            opacity: 0.7;
-        }
-        .proj-value {
-            color: var(--accent2);
-            font-size: 10px;
-            font-weight: 700;
-        }
+        /* Compass */
+        .widget-compass { padding: 10px; cursor: pointer; }
+        .compass-rose { width: 48px; height: 48px; transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        .widget-compass:hover .compass-rose { transform: rotate(15deg) scale(1.1); }
 
-        /* ====== POPUP ====== */
+        /* ── POPUP ── */
         .info-popup {
             position: absolute;
-            bottom: 90px;
-            left: 50%;
-            transform: translateX(-50%) translateY(20px);
-            background: var(--glass);
-            backdrop-filter: blur(24px);
+            bottom: 90px; left: 50%;
+            transform: translateX(-50%) translateY(20px) scale(0.95);
+            background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 16px;
             padding: 20px 24px;
-            min-width: 320px;
-            max-width: 420px;
+            min-width: min(320px, 90vw);
+            width: max-content;
+            max-width: min(500px, 90vw);
+            height: auto;
+            max-height: 50vh;
+            overflow-y: auto;
             opacity: 0;
             pointer-events: none;
-            transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
-            box-shadow: 0 16px 48px rgba(0,0,0,0.5), 0 0 0 1px var(--border);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: var(--shadow-lg);
             z-index: 2000;
+            display: flex;
+            flex-direction: column;
         }
         .info-popup.visible {
             opacity: 1;
             pointer-events: all;
-            transform: translateX(-50%) translateY(0);
+            transform: translateX(-50%) translateY(0) scale(1);
         }
 
         .popup-close {
             position: absolute;
-            top: 12px; right: 14px;
-            width: 24px; height: 24px;
+            top: 12px; right: 12px;
+            width: 26px; height: 26px;
             background: var(--surface2);
             border: 1px solid var(--border);
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
             display: flex; align-items: center; justify-content: center;
             font-size: 14px;
             color: var(--text-muted);
-            transition: all 0.2s;
+            transition: all 0.2s ease;
             line-height: 1;
         }
-        .popup-close:hover { background: var(--surface); color: var(--text); }
+        .popup-close:hover { background: var(--surface); color: var(--accent3); border-color: var(--accent3); transform: rotate(90deg); }
 
-        .popup-tag {
-            font-family: 'Poppins', sans-serif;
-            font-size: 8px;
-            letter-spacing: 0.2em;
+        .popup-eyebrow {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
             text-transform: uppercase;
             color: var(--accent);
             margin-bottom: 8px;
-            display: flex; align-items: center; gap: 6px;
-        }
-        .popup-tag::before {
-            content: '';
-            width: 4px; height: 4px;
-            border-radius: 50%;
-            background: var(--accent);
-            box-shadow: 0 0 6px var(--accent);
         }
 
         .popup-title {
             font-size: 18px;
-            font-weight: 800;
-            margin-bottom: 14px;
-            line-height: 1.2;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text);
+            letter-spacing: -0.01em;
         }
 
         .popup-grid {
@@ -455,341 +514,868 @@
             background: var(--surface2);
             border-radius: 10px;
             padding: 10px 12px;
-            border: 1px solid rgba(255,255,255,0.04);
+            border: 1px solid var(--border);
+            transition: background 0.2s ease;
         }
+        .popup-stat:hover { background: var(--surface); border-color: var(--border-strong); }
+        
         .popup-stat-label {
-            font-family: 'Poppins', sans-serif;
-            font-size: 8px;
-            color: var(--text-muted);
-            letter-spacing: 0.1em;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.08em;
             text-transform: uppercase;
+            color: var(--text-hint);
             margin-bottom: 4px;
         }
         .popup-stat-value {
             font-size: 14px;
-            font-weight: 700;
+            font-weight: 500;
             color: var(--text);
+            font-family: 'DM Mono', monospace;
         }
         .popup-stat-value.accent { color: var(--accent); }
         .popup-stat-value.accent2 { color: var(--accent2); }
 
         .popup-badge {
             display: inline-block;
-            padding: 3px 10px;
+            padding: 4px 12px;
             border-radius: 20px;
-            font-size: 11px;
-            font-weight: 700;
-            margin-top: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 16px;
+            animation: popIn 0.4s ease both;
         }
 
-        /* ====== GRID OVERLAY ====== */
-        .grid-overlay {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            pointer-events: none;
-            z-index: 5;
-            opacity: 0.04;
-            background-image:
-                linear-gradient(rgba(100,140,255,0.8) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(100,140,255,0.8) 1px, transparent 1px);
-            background-size: 80px 80px;
+        /* ── ANIMATIONS ── */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
-
-        /* ====== CORNER DECORATIONS ====== */
-        .corner {
-            position: absolute;
-            width: 24px; height: 24px;
-            z-index: 10;
-            pointer-events: none;
-        }
-        .corner::before, .corner::after { content: ''; position: absolute; background: var(--accent); opacity: 0.5; }
-        .corner::before { width: 2px; height: 100%; }
-        .corner::after { width: 100%; height: 2px; }
-
-        .corner-tl { top: 0; left: 0; }
-        .corner-tr { top: 0; right: 0; transform: scaleX(-1); }
-        .corner-bl { bottom: 0; left: 0; transform: scaleY(-1); }
-        .corner-br { bottom: 0; right: 0; transform: scale(-1); }
-
-        /* ====== STATUS BAR ====== */
-        .status-bar {
-            position: absolute;
-            top: 20px; right: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            animation: slideLeft 0.7s cubic-bezier(0.16,1,0.3,1) 0.15s both;
-        }
-
-        .status-chip {
-            background: var(--glass);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 8px 14px;
-            font-family: 'Poppins', sans-serif;
-            font-size: 9px;
-            color: var(--text-muted);
-            letter-spacing: 0.1em;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .status-dot {
-            width: 5px; height: 5px;
-            border-radius: 50%;
-            background: var(--accent2);
-            box-shadow: 0 0 6px var(--accent2);
-            animation: pulse 3s infinite;
-        }
-
-        /* ====== LOADING INDICATOR ====== */
-        .loading-chip {
-            background: var(--glass);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255,107,107,0.3);
-            border-radius: 10px;
-            padding: 8px 14px;
-            font-family: 'Poppins', sans-serif;
-            font-size: 9px;
-            color: var(--accent3);
-            letter-spacing: 0.1em;
-            display: none;
-            align-items: center;
-            gap: 8px;
-        }
-        .loading-chip.show { display: flex; }
-        .loading-dot {
-            width: 5px; height: 5px;
-            border-radius: 50%;
-            background: var(--accent3);
-            box-shadow: 0 0 6px var(--accent3);
-            animation: pulse 1s infinite;
-        }
-
-        /* ====== ANIMATIONS ====== */
-        @keyframes slideDown {
-            from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+        @keyframes fadeDown {
+            from { opacity: 0; transform: translateX(-50%) translateY(-24px); }
             to { opacity: 1; transform: translateX(-50%) translateY(0); }
         }
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateX(-50%) translateY(24px); }
             to { opacity: 1; transform: translateX(-50%) translateY(0); }
         }
-        @keyframes slideRight {
-            from { opacity: 0; transform: translateY(-50%) translateX(-20px); }
+        @keyframes fadeRight {
+            from { opacity: 0; transform: translateY(-50%) translateX(-24px); }
             to { opacity: 1; transform: translateY(-50%) translateX(0); }
         }
-        @keyframes slideLeft {
-            from { opacity: 0; transform: translateX(20px); }
+        @keyframes fadeLeft {
+            from { opacity: 0; transform: translateX(24px); }
             to { opacity: 1; transform: translateX(0); }
         }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
+        @keyframes blink {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+            50% { opacity: 0.5; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0); }
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0.85); }
+            70% { transform: scale(1.02); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        @keyframes slideUpLine {
+            0% { transform: scaleY(0); opacity: 0; }
+            100% { transform: scaleY(1); opacity: 1; }
         }
 
-        /* Leaflet overrides */
+        /* Leaflet */
         .leaflet-control-attribution { display: none; }
         .leaflet-control-zoom { display: none; }
 
-        /* Scrollbar */
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+        /* ── PAGE LAYOUT ── */
+        .page {
+            display: none;
+            width: 100%;
+            position: fixed;
+            top: 56px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1;
+            flex-direction: column;
+            background: var(--surface);
+            animation: fadeIn 0.3s ease both;
+        }
+
+        .page.active {
+            display: flex;
+        }
+
+        #page-map {
+            top: 56px !important;
+            height: calc(100vh - 56px) !important;
+            bottom: auto !important;
+            flex-direction: row;
+            overflow: hidden;
+            background: var(--surface2);
+        }
+
+        #page-map .overlay {
+            display: flex;
+        }
+
+        #page-map:not(.active) .overlay {
+            display: none;
+        }
+
+        #page-home, #page-deskripsi, #page-bantuan {
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        /* Hide overlay elements when not in map page */
+        #page-home .overlay,
+        #page-deskripsi .overlay,
+        #page-bantuan .overlay {
+            display: none !important;
+        }
+
+        /* ── TABS NAVIGATION (Elegant Light Theme) ── */
+        .tabs-container {
+            background: var(--surface);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            height: 56px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            z-index: 1003;
+            box-shadow: var(--shadow-sm);
+            border-bottom: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn {
+            padding: 0 24px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            transition: all 0.3s ease;
+            position: relative;
+            display: flex;
+            align-items: center;
+            height: 100%;
+        }
+
+        .tab-btn:hover {
+            color: var(--text);
+            background: var(--surface2);
+        }
+
+        .tab-btn.active {
+            color: var(--accent);
+            font-weight: 600;
+            background: var(--accent-soft);
+        }
+
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: var(--accent);
+            border-top-left-radius: 3px;
+            border-top-right-radius: 3px;
+            transform-origin: bottom;
+            animation: slideUpLine 0.3s cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+
+        /* ── CONTENT PAGES ── */
+        .page-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 40px;
+            width: 100%;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .page-content h1 {
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            margin-top: 0;
+            color: var(--text);
+            letter-spacing: -0.02em;
+        }
+
+        .page-content h2 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-top: 32px;
+            margin-bottom: 16px;
+            color: var(--text);
+            border-top: 1px solid var(--border);
+            padding-top: 24px;
+        }
+
+        .page-content h2:first-of-type {
+            margin-top: 0;
+            border-top: none;
+            padding-top: 0;
+        }
+
+        .page-content p {
+            font-size: 14px;
+            line-height: 1.7;
+            color: var(--text-muted);
+            margin-bottom: 14px;
+        }
+
+        .page-content ul {
+            margin-left: 20px;
+            margin-bottom: 16px;
+            color: var(--text-muted);
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .page-content li {
+            margin-bottom: 8px;
+        }
+
+        .page-content strong {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .legend-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .legend-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .legend-swatch {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            flex-shrink: 0;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .legend-text {
+            font-size: 13px;
+            color: var(--text);
+        }
+
+        /* ── BASEMAP SWITCHER ── */
+        .basemap-switcher {
+            position: absolute;
+            bottom: 110px; right: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            animation: fadeLeft 0.5s ease 0.2s both;
+        }
+
+        .basemap-btn {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-muted);
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .basemap-btn:hover {
+            border-color: var(--border-strong);
+            color: var(--text);
+        }
+
+        .basemap-btn.active {
+            background: var(--accent-soft);
+            color: var(--accent);
+            border-color: var(--accent);
+        }
     </style>
 </head>
 <body>
-
-    <!-- Grid Overlay -->
-    <div class="grid-overlay"></div>
-
-    <!-- Corner Decorations -->
-    <div class="corner corner-tl"></div>
-    <div class="corner corner-tr"></div>
-    <div class="corner corner-bl"></div>
-    <div class="corner corner-br"></div>
-
-    <!-- Map -->
-    <div id="map"></div>
-
-    <!-- Overlay UI -->
-    <div class="overlay">
-
-        <!-- Header -->
-        <div class="header">
-            <div class="header-dot"></div>
-            <h1>WebGIS — Sumatera Utara</h1>
-            <div class="header-divider"></div>
-            <div class="header-meta">WGS 84 · UTM Zone 47N</div>
-            <div class="header-divider"></div>
-            <div class="header-meta" id="live-time">--:--:--</div>
+    <!-- Tabs Navigation (Global) -->
+    <div class="tabs-container">
+        <div class="header-brand">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
+            </svg>
+            <div class="header-title">WebGIS Sumatera Utara</div>
+        </div>
+        
+        <div class="header-nav">
+            <button class="tab-btn active" data-page="map">Peta</button>
+            <button class="tab-btn" data-page="home">Home</button>
+            <button class="tab-btn" data-page="deskripsi">Deskripsi</button>
+            <button class="tab-btn" data-page="bantuan">Bantuan</button>
         </div>
 
-        <!-- Status chips top-right -->
+        <div class="header-right">
+            <div class="live-badge"><div class="live-dot"></div>Live</div>
+            <div class="header-time" id="live-time">--:--:--</div>
+        </div>
+    </div>
+
+    <!-- PAGE: MAP -->
+    <div class="page active" id="page-map">
+        <div id="map"></div>
+
+        <div class="overlay">
+        <!-- Status top right -->
         <div class="status-bar">
-            <div class="status-chip"><div class="status-dot"></div> LIVE DATA</div>
-            <div class="status-chip" id="coord-display">0.0000°N, 0.0000°E</div>
-            <!-- Loading indicator -->
+            <div class="status-chip coord" id="coord-display">0.0000°N, 0.0000°E</div>
             <div class="loading-chip" id="loading-chip">
-                <div class="loading-dot"></div>
+                <div class="loading-spin"></div>
                 <span id="loading-text">Memuat data...</span>
             </div>
         </div>
 
-        <!-- Left Panel — Layer Controls -->
+        <!-- Left: Layer Controls -->
         <div class="panel-left">
-            <div class="panel-title">// Layers</div>
+            <div class="panel-section-label">Layers</div>
 
-            <!-- RawanBanjir — TERSEDIA (file: DataSIG/RawanBanjir.json) -->
             <div class="layer-btn active" data-layer="RawanBanjir" style="--clr:#fc8d59">
-                <div class="layer-indicator" style="color:#fc8d59"></div>
+                <div class="layer-dot" style="color:#fc8d59"></div>
                 <span class="layer-label">Peta Rawan Banjir</span>
                 <div class="layer-toggle"></div>
             </div>
 
-            <!-- Curah Hujan — BELUM TERSEDIA -->
-            <div class="layer-btn unavailable" data-layer="curahhujan" style="--clr:#8a2be2" title="File DataSIG/CurahHujan.geojson belum tersedia">
-                <div class="layer-indicator" style="color:#8a2be2"></div>
+            <div class="layer-btn unavailable" data-layer="curahhujan" style="--clr:#8a2be2">
+                <div class="layer-dot" style="color:#8a2be2"></div>
                 <span class="layer-label">Curah Hujan</span>
-                <span class="layer-unavail-badge">N/A</span>
+                <span class="layer-na">N/A</span>
             </div>
 
-            <!-- Penggunaan Lahan — BELUM TERSEDIA -->
-            <div class="layer-btn unavailable" data-layer="penggunaanlahan" style="--clr:#1a9641" title="File DataSIG/PenggunaanLahan.geojson belum tersedia">
-                <div class="layer-indicator" style="color:#1a9641"></div>
+            <div class="layer-btn unavailable" data-layer="penggunaanlahan" style="--clr:#16a34a">
+                <div class="layer-dot" style="color:#16a34a"></div>
                 <span class="layer-label">Penggunaan Lahan</span>
-                <span class="layer-unavail-badge">N/A</span>
+                <span class="layer-na">N/A</span>
             </div>
 
-            <!-- Kerapatan Sungai — BELUM TERSEDIA -->
-            <div class="layer-btn unavailable" data-layer="kerapatansungai" style="--clr:#4f8fff" title="File DataSIG/KerapatanSungai.geojson belum tersedia">
-                <div class="layer-indicator" style="color:#4f8fff"></div>
+            <div class="layer-btn unavailable" data-layer="kerapatansungai" style="--clr:#2563eb">
+                <div class="layer-dot" style="color:#2563eb"></div>
                 <span class="layer-label">Kerapatan Sungai</span>
-                <span class="layer-unavail-badge">N/A</span>
+                <span class="layer-na">N/A</span>
             </div>
         </div>
 
-        <!-- Right Panel — Legend -->
+        <!-- Right: Legend -->
         <div class="panel-right">
-            <div class="legend-title">Legenda</div>
+            <div class="legend-heading">Legenda</div>
             <div id="legend-content"></div>
         </div>
 
         <!-- Bottom Bar -->
         <div class="bottom-bar">
 
-            <!-- Projection -->
-            <div class="map-widget proj-widget">
-                <div class="proj-label">PROYEKSI</div>
-                <div class="proj-value">WGS 1984</div>
-                <div class="proj-label">UTM ZONE 47N</div>
+            <div class="widget widget-proj">
+                <div class="label">Proyeksi</div>
+                <div class="val">WGS 1984</div>
+                <div class="label">UTM Zone 47N</div>
             </div>
 
-            <!-- Scale Bar -->
-            <div class="map-widget scale-widget">
-                <div class="scale-bar" id="scale-bar">
-                    <div class="scale-seg" style="width:40px"></div>
-                    <div class="scale-seg" style="width:40px"></div>
-                    <div class="scale-seg" style="width:40px"></div>
-                    <div class="scale-seg" style="width:40px"></div>
+            <div class="widget widget-scale" style="min-width:130px">
+                <div class="scale-track" style="width:120px">
+                    <div class="scale-seg" style="flex:1"></div>
+                    <div class="scale-seg" style="flex:1"></div>
+                    <div class="scale-seg" style="flex:1"></div>
+                    <div class="scale-seg" style="flex:1"></div>
                 </div>
-                <div class="scale-labels">
+                <div class="scale-labels" style="width:120px">
                     <span>0</span>
                     <span id="scale-label">50 km</span>
                 </div>
             </div>
 
-            <!-- Coordinates -->
-            <div class="map-widget">
-                <div class="coord-icon"></div>
+            <div class="widget widget-coord">
+                <div class="coord-dot"></div>
                 <div>
-                    <div style="font-size:8px;opacity:0.6;margin-bottom:2px">KOORDINAT KURSOR</div>
-                    <div id="coord-bottom" style="color:var(--accent2)">—</div>
+                    <div style="font-size:9px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-hint);margin-bottom:2px">Koordinat</div>
+                    <div id="coord-bottom">—</div>
                 </div>
             </div>
 
-            <!-- Zoom -->
-            <div class="map-widget zoom-widget">
+            <div class="widget widget-zoom">
                 <div class="zoom-btn" id="btn-zoomin">+</div>
                 <div class="zoom-level" id="zoom-display">Z7</div>
                 <div class="zoom-btn" id="btn-zoomout">−</div>
             </div>
 
-            <!-- Compass -->
-            <div class="map-widget compass-widget">
-                <div class="compass-rose">
-                    <svg viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="26" cy="26" r="24" stroke="rgba(100,140,255,0.2)" stroke-width="1"/>
-                        <circle cx="26" cy="26" r="18" stroke="rgba(100,140,255,0.1)" stroke-width="1" stroke-dasharray="2 3"/>
-                        <polygon points="26,4 22,26 26,24 30,26" fill="#ff6b6b" opacity="0.9"/>
-                        <polygon points="26,48 22,26 26,28 30,26" fill="rgba(255,255,255,0.3)"/>
-                        <line x1="48" y1="26" x2="44" y2="26" stroke="rgba(100,140,255,0.5)" stroke-width="1.5"/>
-                        <line x1="4" y1="26" x2="8" y2="26" stroke="rgba(100,140,255,0.5)" stroke-width="1.5"/>
-                        <circle cx="26" cy="26" r="3" fill="white" opacity="0.8"/>
-                        <text x="26" y="12" text-anchor="middle" fill="#ff6b6b" font-size="7" font-family="Poppins" font-weight="700">N</text>
-                        <text x="26" y="46" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="6" font-family="Poppins">S</text>
-                        <text x="46" y="28" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="6" font-family="Poppins">E</text>
-                        <text x="6" y="28" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="6" font-family="Poppins">W</text>
-                    </svg>
-                </div>
+            <div class="widget widget-compass">
+                <svg class="compass-rose" viewBox="0 0 46 46" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="23" cy="23" r="21" stroke="#e5e7eb" stroke-width="1"/>
+                    <circle cx="23" cy="23" r="14" stroke="#e5e7eb" stroke-width="0.5" stroke-dasharray="2 2"/>
+                    <polygon points="23,4 20,23 23,21 26,23" fill="#dc2626" opacity="0.85"/>
+                    <polygon points="23,42 20,23 23,25 26,23" fill="#d1d5db"/>
+                    <line x1="42" y1="23" x2="38" y2="23" stroke="#d1d5db" stroke-width="1.5"/>
+                    <line x1="4" y1="23" x2="8" y2="23" stroke="#d1d5db" stroke-width="1.5"/>
+                    <circle cx="23" cy="23" r="2.5" fill="white" stroke="#e5e7eb" stroke-width="0.5"/>
+                    <text x="23" y="11" text-anchor="middle" fill="#dc2626" font-size="6.5" font-family="DM Sans" font-weight="600">N</text>
+                    <text x="23" y="43" text-anchor="middle" fill="#9ca3af" font-size="5.5" font-family="DM Sans">S</text>
+                    <text x="43" y="25" text-anchor="middle" fill="#9ca3af" font-size="5.5" font-family="DM Sans">E</text>
+                    <text x="3" y="25" text-anchor="middle" fill="#9ca3af" font-size="5.5" font-family="DM Sans">W</text>
+                </svg>
             </div>
         </div>
 
-        <!-- Feature Info Popup -->
+        <!-- Basemap Switcher -->
+        <div class="basemap-switcher">
+            <div style="font-size: 9px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-hint); padding: 0 2px;">Basemap</div>
+            <button class="basemap-btn active" data-basemap="satellite">📡 Aerial</button>
+            <button class="basemap-btn" data-basemap="terrain">🗻 Terrain</button>
+            <button class="basemap-btn" data-basemap="street">🛣️ Street</button>
+        </div>
+
+        <!-- Feature Popup -->
         <div class="info-popup" id="info-popup">
             <button class="popup-close" id="popup-close">✕</button>
-            <div class="popup-tag" id="popup-tag">Layer</div>
+            <div class="popup-eyebrow" id="popup-tag">Layer</div>
             <div class="popup-title" id="popup-title">Nama Wilayah</div>
             <div class="popup-grid" id="popup-grid"></div>
             <div id="popup-badge-container"></div>
         </div>
 
     </div>
+    <!-- END PAGE: MAP -->
+
+    <!-- PAGE: HOME -->
+    <style>
+        .home-wrapper {
+            flex: 1;
+            width: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            background: var(--surface);
+            display: flex;
+            flex-direction: column;
+        }
+        .home-hero {
+            text-align: center;
+            padding: 100px 20px 80px;
+            background: linear-gradient(135deg, var(--accent-soft) 0%, var(--surface) 100%);
+            border-bottom: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .home-hero::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(circle at 50% 50%, rgba(26, 115, 232, 0.05) 0%, transparent 50%);
+            animation: spin 30s linear infinite;
+            pointer-events: none;
+        }
+        .home-hero h1 {
+            font-size: 52px;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.03em;
+            margin-bottom: 24px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.15;
+            position: relative;
+            z-index: 2;
+        }
+        .home-hero p {
+            font-size: 18px;
+            color: var(--text-muted);
+            max-width: 650px;
+            margin: 0 auto 36px;
+            line-height: 1.6;
+            position: relative;
+            z-index: 2;
+        }
+        .home-cta-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            position: relative;
+            z-index: 2;
+        }
+        .home-cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--accent);
+            color: white;
+            padding: 14px 28px;
+            border-radius: 30px;
+            font-size: 15px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+        .home-cta:hover {
+            background: #1557b0;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(26, 115, 232, 0.3);
+        }
+        .home-cta.secondary {
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--border-strong);
+        }
+        .home-cta.secondary:hover {
+            background: var(--surface2);
+            color: var(--accent);
+            border-color: var(--accent);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+        }
+        .home-features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            padding: 80px 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+            flex-shrink: 0;
+        }
+        .feature-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 32px;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: var(--shadow-sm);
+        }
+        .feature-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--accent);
+        }
+        .feature-icon {
+            width: 56px;
+            height: 56px;
+            background: var(--accent-soft);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            color: var(--accent);
+        }
+        .feature-icon svg { width: 28px; height: 28px; fill: currentColor; }
+        .feature-card h3 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text);
+        }
+        .feature-card p {
+            font-size: 15px;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin: 0;
+        }
+        .stats-section {
+            background: #202124;
+            color: white;
+            padding: 80px 40px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 40px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .stat-item h4 {
+            font-size: 48px;
+            font-weight: 700;
+            color: #8ab4f8;
+            margin-bottom: 8px;
+            font-family: 'DM Mono', monospace;
+        }
+        .stat-item p {
+            font-size: 13px;
+            color: #9aa0a6;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            font-weight: 700;
+        }
+    </style>
+    <div class="page" id="page-home">
+        <div class="home-wrapper">
+            <!-- Hero Section -->
+            <section class="home-hero">
+                <h1>Analisis Spasial Skala Besar untuk Sumatera Utara</h1>
+                <p>WebGIS menghadirkan platform data geospasial tingkat lanjut yang menggabungkan berbagai lapisan informasi (curah hujan, penggunaan lahan, kerawanan banjir) menjadi satu antarmuka yang cepat, interaktif, dan mudah diakses untuk analisis pembangunan berkelanjutan.</p>
+                <div class="home-cta-container">
+                    <button class="home-cta" onclick="document.querySelector('.tab-btn[data-page=\'map\']').click()">
+                        Mulai Eksplorasi Peta
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none"><path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                    <button class="home-cta secondary" onclick="document.querySelector('.tab-btn[data-page=\'deskripsi\']').click()">
+                        Pelajari Metodologi
+                    </button>
+                </div>
+            </section>
+
+            <!-- Features Section -->
+            <section class="home-features">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                    <h3>Multi-Layer Dinamis</h3>
+                    <p>Hamparan data raster dan vektor interaktif. Analisis keterkaitan antara topografi, curah hujan, dan tata guna lahan dalam satu layar secara real-time.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" stroke="currentColor" stroke-width="2" fill="none"/><circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+                    </div>
+                    <h3>Pemetaan Risiko Cerdas</h3>
+                    <p>Visualisasi area rawan bencana yang dikalkulasi secara presisi. Membantu pemangku kepentingan mengidentifikasi mitigasi berdasarkan parameter geofisik.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24"><path d="M3 3v18h18M18 17V9M13 17V5M8 17v-3" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                    <h3>Data Berbasis Kinerja</h3>
+                    <p>Dibangun di atas arsitektur yang ringan dan cepat, memastikan proses render peta skala provinsi dapat berjalan mulus tanpa membebani memori perangkat Anda.</p>
+                </div>
+            </section>
+
+            <!-- Stats Section -->
+            <section class="stats-section">
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <h4>33</h4>
+                        <p>Kabupaten/Kota</p>
+                    </div>
+                    <div class="stat-item">
+                        <h4>4+</h4>
+                        <p>Layer Spasial</p>
+                    </div>
+                    <div class="stat-item">
+                        <h4>100%</h4>
+                        <p>Akurasi Pemetaan</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+    <!-- END PAGE: HOME -->
+
+    <!-- PAGE: DESKRIPSI -->
+    <div class="page" id="page-deskripsi">
+        <div class="page-content">
+            <h1>Deskripsi Data & Metodologi</h1>
+            
+            <h2>Peta Rawan Banjir</h2>
+            <p>Peta rawan banjir menunjukkan tingkat kerentanan suatu wilayah terhadap banjir berdasarkan analisis multi-faktor. Data ini dikategorikan menjadi 5 level kerawanan:</p>
+            
+            <div class="legend-grid">
+                <div class="legend-box">
+                    <div class="legend-swatch" style="background: #1a9641;"></div>
+                    <div class="legend-text"><strong>1 - Rendah</strong><br><small>Kerawanan minimal, risiko banjir sangat kecil</small></div>
+                </div>
+                <div class="legend-box">
+                    <div class="legend-swatch" style="background: #a6d96a;"></div>
+                    <div class="legend-text"><strong>2 - Agak Rendah</strong><br><small>Kerawanan rendah, risiko terbatas</small></div>
+                </div>
+                <div class="legend-box">
+                    <div class="legend-swatch" style="background: #fee08b;"></div>
+                    <div class="legend-text"><strong>3 - Sedang</strong><br><small>Kerawanan medium, perlu perhatian</small></div>
+                </div>
+                <div class="legend-box">
+                    <div class="legend-swatch" style="background: #fc8d59;"></div>
+                    <div class="legend-text"><strong>4 - Agak Tinggi</strong><br><small>Kerawanan tinggi, risiko signifikan</small></div>
+                </div>
+                <div class="legend-box">
+                    <div class="legend-swatch" style="background: #d73027;"></div>
+                    <div class="legend-text"><strong>5 - Tinggi</strong><br><small>Kerawanan sangat tinggi, risiko ekstrem</small></div>
+                </div>
+            </div>
+
+            <h2>Faktor Analisis</h2>
+            <p>Klasifikasi tingkat kerawanan didasarkan pada berbagai faktor:</p>
+            <ul>
+                <li><strong>Curah Hujan:</strong> Intensitas dan durasi curah hujan musiman</li>
+                <li><strong>Topografi:</strong> Elevasi dan kemiringan lereng</li>
+                <li><strong>Penggunaan Lahan:</strong> Tutupan lahan dan infiltrasi air</li>
+                <li><strong>Kerapatan Sungai:</strong> Jaringan drainase dan kapasitas pengaliran</li>
+                <li><strong>Geologi:</strong> Jenis dan permeabilitas tanah</li>
+            </ul>
+
+            <h2>Layer Tambahan (Segera Hadir)</h2>
+            <p>Platform ini akan dilengkapi dengan layer data tambahan untuk analisis yang lebih komprehensif:</p>
+            <ul>
+                <li><strong>Curah Hujan:</strong> Peta curah hujan rata-rata tahunan per wilayah</li>
+                <li><strong>Penggunaan Lahan:</strong> Klasifikasi penggunaan tanah (hutan, pertanian, terbangun, dll)</li>
+                <li><strong>Kerapatan Sungai:</strong> Densitas jaringan sungai per unit area</li>
+            </ul>
+        </div>
+    </div>
+    <!-- END PAGE: DESKRIPSI -->
+
+    <!-- PAGE: BANTUAN -->
+    <div class="page" id="page-bantuan">
+        <div class="page-content">
+            <h1>Bantuan & Panduan Penggunaan</h1>
+            
+            <h2>Cara Menggunakan Aplikasi</h2>
+            
+            <h2>Navigasi Peta</h2>
+            <ul>
+                <li><strong>Zoom In/Out:</strong> Gunakan tombol + dan − di pojok kanan bawah, atau scroll mouse wheel</li>
+                <li><strong>Pan (Geser Peta):</strong> Klik dan drag peta dengan mouse untuk bergerak ke area lain</li>
+                <li><strong>Full Extent:</strong> Peta akan otomatis zoom ke jangkauan penuh saat pertama kali dimuat</li>
+            </ul>
+
+            <h2>Layer & Kontrol</h2>
+            <ul>
+                <li><strong>Toggle Layer:</strong> Gunakan tombol di panel kiri untuk menampilkan/menyembunyikan layer data</li>
+                <li><strong>Legenda:</strong> Panel kanan menampilkan legenda layer yang sedang aktif</li>
+                <li><strong>Pilih Basemap:</strong> Klik tombol Aerial, Terrain, atau Street di pojok kanan bawah untuk mengubah peta dasar</li>
+            </ul>
+
+            <h2>Informasi Fitur</h2>
+            <ul>
+                <li><strong>Lihat Detail:</strong> Klik pada area di peta untuk melihat popup dengan informasi detail</li>
+                <li><strong>Tutup Popup:</strong> Klik tombol X pada popup atau klik area lain di peta</li>
+                <li><strong>Hover:</strong> Arahkan mouse ke fitur untuk melihat highlight/perubahan style</li>
+            </ul>
+
+            <h2>Widget & Tools</h2>
+            <ul>
+                <li><strong>Koordinat:</strong> Tampilan koordinat real-time saat mouse bergerak di peta (atas kanan)</li>
+                <li><strong>Zoom Level:</strong> Menunjukkan level zoom saat ini (pojok kanan bawah)</li>
+                <li><strong>Scale:</strong> Skala peta dalam kilometer untuk referensi jarak</li>
+                <li><strong>Compass:</strong> Indikator arah utara untuk orientasi peta</li>
+                <li><strong>Live Time:</strong> Jam real-time di header</li>
+            </ul>
+
+            <h2>Tips & Trik</h2>
+            <ul>
+                <li>Gunakan Basemap Aerial untuk melihat citra satelit detail</li>
+                <li>Gunakan Basemap Terrain untuk analisis topografi</li>
+                <li>Zoom ke level tinggi (Z12+) untuk melihat detail fitur yang lebih kecil</li>
+                <li>Perhatikan legenda saat menganalisis data risiko banjir</li>
+            </ul>
+
+            <h2>Troubleshooting</h2>
+            <ul>
+                <li><strong>Peta tidak loading:</strong> Cek koneksi internet dan refresh halaman</li>
+                <li><strong>Layer tidak muncul:</strong> Pastikan layer sudah diaktifkan di panel kiri</li>
+                <li><strong>Data tidak lengkap:</strong> Beberapa layer masih dalam tahap pengembangan</li>
+            </ul>
+        </div>
+    </div>
+    <!-- END PAGE: BANTUAN -->
 
     <script>
-        // ======================================
-        // MAP INIT — Sumatera Utara
-        // Pusat koordinat: ~2.5°N, 99.0°E (Sumatera Utara)
-        // ======================================
         var map = L.map('map', { zoomControl: false, attributionControl: false })
                    .setView([2.5, 99.0], 7);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        // Basemap layers
+        const basemaps = {
+            satellite: L.tileLayer.provider('Esri.WorldImagery'),
+            terrain: L.tileLayer.provider('OpenTopoMap'),
+            street: L.tileLayer.provider('OpenStreetMap.Mapnik')
+        };
 
-        // ======================================
-        // FILE PATH — Disesuaikan dengan struktur DataSIG yang ada
-        // Hanya RawanBanjir.json yang tersedia di folder DataSIG
-        // ======================================
+        // Set default basemap
+        basemaps.satellite.addTo(map);
+
+        // Basemap switcher functionality
+        document.querySelectorAll('.basemap-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const basemapName = this.dataset.basemap;
+                
+                // Remove all basemaps
+                Object.values(basemaps).forEach(layer => map.removeLayer(layer));
+                
+                // Add selected basemap
+                basemaps[basemapName].addTo(map);
+                
+                // Update active state
+                document.querySelectorAll('.basemap-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // Tab switching functionality
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const pageName = this.dataset.page;
+                
+                // Hide all pages
+                document.querySelectorAll('.page').forEach(page => {
+                    page.classList.remove('active');
+                });
+                
+                // Show selected page
+                document.getElementById('page-' + pageName).classList.add('active');
+                
+                // Update active button
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Trigger map resize if map page
+                if (pageName === 'map' && map) {
+                    setTimeout(() => map.invalidateSize(), 300);
+                }
+            });
+        });
+
         const filePaths = {
-            RawanBanjir:      'DataSIG/RawanBanjir.json',      // ✅ TERSEDIA
-            curahhujan:       'DataSIG/CurahHujan.geojson',    // ❌ Belum ada (N/A)
-            penggunaanlahan:  'DataSIG/PenggunaanLahan.geojson', // ❌ Belum ada (N/A)
-            kerapatansungai:  'DataSIG/KerapatanSungai.geojson'  // ❌ Belum ada (N/A)
+            RawanBanjir:      'DataSIG/RawanBanjir.json',
+            curahhujan:       'DataSIG/CurahHujan.geojson',
+            penggunaanlahan:  'DataSIG/PenggunaanLahan.geojson',
+            kerapatansungai:  'DataSIG/KerapatanSungai.geojson'
         };
 
-        // Flag layer yang tersedia
         const layerAvailable = {
-            RawanBanjir:      true,
-            curahhujan:       false,
-            penggunaanlahan:  false,
-            kerapatansungai:  false
+            RawanBanjir:     true,
+            curahhujan:      false,
+            penggunaanlahan: false,
+            kerapatansungai: false
         };
 
-        // ======================================
-        // LEGEND DATA
-        // ======================================
         const legends = {
             RawanBanjir: {
                 label: 'Peta Rawan Banjir',
                 items: [
-                    { color: '#d73027', label: 'Besar' },
-                    { color: '#fc8d59', label: 'Agak Besar' },
-                    { color: '#fee08b', label: 'Sedang' },
-                    { color: '#d9ef8b', label: 'Agak Kecil' },
-                    { color: '#91cf60', label: 'Kecil' },
+                    { color: '#1a9641', label: '1 — Rendah' },
+                    { color: '#a6d96a', label: '2 — Agak Rendah' },
+                    { color: '#fee08b', label: '3 — Sedang' },
+                    { color: '#fc8d59', label: '4 — Agak Tinggi' },
+                    { color: '#d73027', label: '5 — Tinggi' },
                 ]
             },
             curahhujan: {
@@ -824,26 +1410,12 @@
             }
         };
 
-        // ======================================
-        // STYLE FUNCTIONS
-        // Properti disesuaikan dengan struktur GeoJSON RawanBanjir.json
-        // ======================================
         const styleFns = {
             RawanBanjir: {
-                // Coba beberapa kemungkinan nama properti yang umum dalam GeoJSON banjir
-                // (akan dideteksi otomatis saat data pertama kali dimuat)
-                prop: null, // akan diisi otomatis
-                colors: {
-                    'Besar':      '#d73027',
-                    'Agak Besar': '#fc8d59',
-                    'Sedang':     '#fee08b',
-                    'Agak Kecil': '#d9ef8b',
-                    'Kecil':      '#91cf60'
-                },
-                // Fallback: cari properti yang relevan
-                propCandidates: ['RawanBanjir', 'RAWAN_BAN', 'KELAS', 'Kelas', 'kelas',
-                                  'Keterangan', 'KETERANGAN', 'kategori', 'KATEGORI',
-                                  'CLASS', 'class', 'value', 'VALUE', 'gridcode']
+                prop: 'gridcode',
+                colors: { 1:'#1a9641', 2:'#a6d96a', 3:'#fee08b', 4:'#fc8d59', 5:'#d73027' },
+                labels: { 1:'Rendah', 2:'Agak Rendah', 3:'Sedang', 4:'Agak Tinggi', 5:'Tinggi' },
+                propCandidates: ['gridcode','GRIDCODE','grid_code','GRID_CODE']
             },
             curahhujan: {
                 prop: 'Keterangan',
@@ -862,36 +1434,17 @@
             }
         };
 
-        /**
-         * Deteksi otomatis properti klasifikasi dari fitur GeoJSON pertama.
-         * Cocokkan berdasarkan kandidat nama properti, lalu fallback ke properti string apapun.
-         */
         function detectProp(layerKey, sampleProperties) {
             const cfg = styleFns[layerKey];
             const keys = Object.keys(sampleProperties);
-            console.log('[WebGIS] Properties detected for', layerKey, ':', keys);
-
-            // 1. Cek kandidat yang sudah didefinisikan
             for (const c of cfg.propCandidates) {
-                if (keys.includes(c)) {
-                    console.log('[WebGIS] Matched prop:', c);
-                    return c;
-                }
+                if (keys.includes(c)) return c;
             }
-            // 2. Coba cari nilai yang cocok dengan warna yang ada
             for (const k of keys) {
-                const val = sampleProperties[k];
-                if (cfg.colors[val]) {
-                    console.log('[WebGIS] Value match found, prop:', k, 'val:', val);
-                    return k;
-                }
+                if (cfg.colors[sampleProperties[k]]) return k;
             }
-            // 3. Gunakan properti string pertama sebagai fallback
             for (const k of keys) {
-                if (typeof sampleProperties[k] === 'string') {
-                    console.warn('[WebGIS] Fallback prop:', k);
-                    return k;
-                }
+                if (typeof sampleProperties[k] === 'string') return k;
             }
             return keys[0] || null;
         }
@@ -899,74 +1452,60 @@
         function makeStyle(layerKey) {
             return function(feature) {
                 const cfg = styleFns[layerKey];
-                const prop = cfg.prop;
-                const val = prop ? feature.properties[prop] : null;
+                const val = cfg.prop ? Number(feature.properties[cfg.prop]) : null;
                 return {
                     fillColor: (val && cfg.colors[val]) ? cfg.colors[val] : '#cccccc',
                     weight: 0.5,
-                    opacity: 0.3,
-                    color: 'rgba(255,255,255,0.3)',
-                    fillOpacity: 0.75
+                    opacity: 0.4,
+                    color: 'rgba(255,255,255,0.5)',
+                    fillOpacity: 0.72
                 };
             };
         }
 
-        // ======================================
-        // POPUP INFO
-        // Menampilkan semua properti yang ada pada fitur
-        // ======================================
         const popup = document.getElementById('info-popup');
-        const popupClose = document.getElementById('popup-close');
-        popupClose.onclick = () => popup.classList.remove('visible');
+        document.getElementById('popup-close').onclick = () => popup.classList.remove('visible');
 
         function showPopup(layerKey, properties) {
             const cfg = styleFns[layerKey];
-            const prop = cfg.prop;
-            const val = prop ? (properties[prop] || 'N/A') : 'N/A';
-            const badgeColor = cfg.colors[val] || '#666';
+            const rawVal = cfg.prop ? properties[cfg.prop] : null;
+            const numVal = Number(rawVal);
+            const badgeColor = cfg.colors[numVal] || '#888';
+            const labelText = cfg.labels
+                ? (cfg.labels[numVal] ? `${numVal} — ${cfg.labels[numVal]}` : String(rawVal))
+                : String(rawVal);
 
-            // Header popup
-            document.getElementById('popup-tag').textContent = legends[layerKey]
-                ? legends[layerKey].label : layerKey;
-            document.getElementById('popup-title').textContent = val;
+            document.getElementById('popup-tag').textContent = legends[layerKey]?.label || layerKey;
+            document.getElementById('popup-title').textContent = labelText || 'N/A';
 
-            // Tampilkan semua properties yang ada dalam grid
-            const propEntries = Object.entries(properties).filter(([k, v]) => v !== null && v !== undefined && v !== '');
+            const propEntries = Object.entries(properties).filter(([,v]) => v !== null && v !== undefined && v !== '');
             const grid = document.getElementById('popup-grid');
-
-            // Batasi maks 6 entri agar tidak overflow
-            const shown = propEntries.slice(0, 6);
-            grid.innerHTML = shown.map(([k, v]) =>
-                `<div class="popup-stat">
+            grid.innerHTML = propEntries.slice(0, 6).map(([k, v]) => {
+                let extra = '';
+                if (k === 'gridcode' && cfg.labels?.[Number(v)]) {
+                    extra = `<div style="font-size:9px;color:${badgeColor};margin-top:2px;font-weight:500">${cfg.labels[Number(v)]}</div>`;
+                }
+                return `<div class="popup-stat">
                     <div class="popup-stat-label">${k}</div>
-                    <div class="popup-stat-value ${k === prop ? 'accent2' : ''}" 
-                         title="${v}" style="font-size:${String(v).length > 12 ? '10px' : '14px'}">
-                         ${String(v).length > 20 ? String(v).substring(0, 18) + '…' : v}
-                    </div>
-                </div>`
-            ).join('');
+                    <div class="popup-stat-value ${k === cfg.prop ? 'accent2' : ''}">${v}</div>
+                    ${extra}
+                </div>`;
+            }).join('');
 
-            // Badge warna kategori
-            const badgeContainer = document.getElementById('popup-badge-container');
-            if (val && val !== 'N/A') {
-                badgeContainer.innerHTML = `<div class="popup-badge" style="background:${badgeColor}22;color:${badgeColor};border:1px solid ${badgeColor}44">${val}</div>`;
-            } else {
-                badgeContainer.innerHTML = '';
-            }
+            const bc = document.getElementById('popup-badge-container');
+            bc.innerHTML = rawVal !== null
+                ? `<div class="popup-badge" style="background:${badgeColor}18;color:${badgeColor};border:1px solid ${badgeColor}40">${labelText}</div>`
+                : '';
 
             popup.classList.add('visible');
         }
 
-        // ======================================
-        // LAYER MANAGEMENT
-        // ======================================
         const layerGroups = {};
         let activeLayers = new Set(['RawanBanjir']);
 
-        function showLoading(text) {
-            const chip = document.getElementById('loading-chip');
-            document.getElementById('loading-text').textContent = text;
-            chip.classList.add('show');
+        function showLoading(t) {
+            document.getElementById('loading-text').textContent = t;
+            document.getElementById('loading-chip').classList.add('show');
         }
         function hideLoading() {
             document.getElementById('loading-chip').classList.remove('show');
@@ -975,90 +1514,47 @@
         function createGeoJSONLayer(key, data) {
             return L.geoJSON(data, {
                 style: makeStyle(key),
-                onEachFeature: function(feature, layer) {
+                onEachFeature(feature, layer) {
                     layer.on({
-                        mouseover: function(e) {
-                            e.target.setStyle({ weight: 1.5, color: 'white', fillOpacity: 0.9 });
-                        },
-                        mouseout: function(e) {
-                            e.target.setStyle({ weight: 0.5, color: 'rgba(255,255,255,0.3)', fillOpacity: 0.75 });
-                        },
-                        click: function(e) {
-                            L.DomEvent.stopPropagation(e);
-                            showPopup(key, feature.properties);
-                        }
+                        mouseover(e) { e.target.setStyle({ weight: 1.5, color: 'white', fillOpacity: 0.88 }); },
+                        mouseout(e)  { e.target.setStyle({ weight: 0.5, color: 'rgba(255,255,255,0.5)', fillOpacity: 0.72 }); },
+                        click(e)     { L.DomEvent.stopPropagation(e); showPopup(key, feature.properties); }
                     });
                 }
             });
         }
 
-        /**
-         * Muat layer dari file.
-         * Hanya memuat layer yang tersedia (layerAvailable === true).
-         */
         function loadLayer(key) {
-            if (!layerAvailable[key]) {
-                // Buat layer grup kosong agar toggle UI tetap berfungsi tanpa error
-                layerGroups[key] = L.layerGroup();
-                return;
-            }
-
+            if (!layerAvailable[key]) { layerGroups[key] = L.layerGroup(); return; }
             showLoading('Memuat ' + key + '...');
-
             fetch(filePaths[key])
-                .then(r => {
-                    if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + filePaths[key]);
-                    return r.json();
-                })
+                .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
                 .then(data => {
-                    // Deteksi properti klasifikasi secara otomatis
-                    if (data.features && data.features.length > 0) {
-                        const sampleProps = data.features[0].properties;
-                        if (!styleFns[key].prop) {
-                            styleFns[key].prop = detectProp(key, sampleProps);
-                        }
-                        console.log('[WebGIS]', key, 'menggunakan properti:', styleFns[key].prop);
+                    if (data.features?.length > 0 && !styleFns[key].prop) {
+                        styleFns[key].prop = detectProp(key, data.features[0].properties);
                     }
-
                     const lg = L.layerGroup();
                     createGeoJSONLayer(key, data).addTo(lg);
                     layerGroups[key] = lg;
-
                     if (activeLayers.has(key)) lg.addTo(map);
-
-                    // Fit bounds ke data jika layer pertama
-                    if (key === 'RawanBanjir' && data.features && data.features.length > 0) {
+                    if (key === 'RawanBanjir' && data.features?.length > 0) {
                         try {
-                            const bounds = L.geoJSON(data).getBounds();
-                            if (bounds.isValid()) map.fitBounds(bounds, { padding: [40, 40] });
-                        } catch(e) { /* abaikan */ }
+                            const b = L.geoJSON(data).getBounds();
+                            if (b.isValid()) map.fitBounds(b, { padding: [40, 40] });
+                        } catch(e) {}
                     }
-
                     hideLoading();
                 })
-                .catch(err => {
-                    console.error('[WebGIS] Gagal memuat', key, ':', err.message);
-                    layerGroups[key] = L.layerGroup(); // kosong, UI tetap jalan
-                    hideLoading();
-                });
+                .catch(err => { console.error(key, err); layerGroups[key] = L.layerGroup(); hideLoading(); });
         }
 
-        // Muat semua layer (hanya yang tersedia yang akan benar-benar di-fetch)
-        Object.keys(filePaths).forEach(key => loadLayer(key));
+        Object.keys(filePaths).forEach(loadLayer);
 
-        // ======================================
-        // LAYER BUTTONS
-        // Tombol yang unavailable tidak bisa diklik
-        // ======================================
         document.querySelectorAll('.layer-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 const key = this.dataset.layer;
-
-                // Blokir interaksi jika layer tidak tersedia
                 if (!layerAvailable[key]) return;
-
                 const isActive = this.classList.contains('active');
-
                 if (isActive) {
                     this.classList.remove('active');
                     activeLayers.delete(key);
@@ -1068,77 +1564,57 @@
                     activeLayers.add(key);
                     if (layerGroups[key]) layerGroups[key].addTo(map);
                 }
-
                 updateLegend();
             });
         });
 
-        // ======================================
-        // LEGEND
-        // ======================================
         function updateLegend() {
             const container = document.getElementById('legend-content');
-
-            // Tampilkan legenda dari layer aktif yang tersedia
             const activeAvailable = [...activeLayers].filter(k => layerAvailable[k]);
             const activeKey = activeAvailable.pop();
-
             if (!activeKey || !legends[activeKey]) {
-                container.innerHTML = '<div style="color:var(--text-muted);font-size:11px;padding:4px">Pilih layer untuk melihat legenda</div>';
+                container.innerHTML = '<div style="color:var(--text-hint);font-size:11px;padding:2px 4px">Pilih layer aktif</div>';
                 return;
             }
-
-            const leg = legends[activeKey];
-            container.innerHTML = leg.items.map(item =>
+            container.innerHTML = legends[activeKey].items.map(item =>
                 `<div class="legend-item">
-                    <div class="legend-swatch" style="background:${item.color};color:${item.color}"></div>
+                    <div class="legend-swatch" style="background:${item.color}"></div>
                     <span>${item.label}</span>
                 </div>`
             ).join('');
         }
         updateLegend();
 
-        // ======================================
-        // COORDINATES & ZOOM
-        // ======================================
-        map.on('mousemove', function(e) {
+        map.on('mousemove', e => {
             const lat = e.latlng.lat.toFixed(4);
             const lng = e.latlng.lng.toFixed(4);
-            const latDir = lat >= 0 ? 'N' : 'S';
-            const lngDir = lng >= 0 ? 'E' : 'W';
-            const str = `${Math.abs(lat)}°${latDir}, ${Math.abs(lng)}°${lngDir}`;
+            const str = `${Math.abs(lat)}°${lat>=0?'N':'S'}, ${Math.abs(lng)}°${lng>=0?'E':'W'}`;
             document.getElementById('coord-display').textContent = str;
             document.getElementById('coord-bottom').textContent = str;
         });
 
-        map.on('zoomend', function() {
+        map.on('zoomend', () => {
             document.getElementById('zoom-display').textContent = 'Z' + map.getZoom();
-            updateScaleBar();
+            updateScale();
         });
 
-        function updateScaleBar() {
+        function updateScale() {
             const z = map.getZoom();
             const kmPerPx = 40075016.686 * Math.cos(2.5 * Math.PI/180) / Math.pow(2, z+8) / 1000;
-            const totalKm = Math.round(kmPerPx * 160);
-            document.getElementById('scale-label').textContent = totalKm + ' km';
+            const total = Math.round(kmPerPx * 120);
+            document.getElementById('scale-label').textContent = total + ' km';
         }
-        updateScaleBar();
+        updateScale();
 
         document.getElementById('btn-zoomin').onclick = () => map.zoomIn();
         document.getElementById('btn-zoomout').onclick = () => map.zoomOut();
 
-        // ======================================
-        // LIVE TIME
-        // ======================================
-        function updateTime() {
-            const now = new Date();
+        function tick() {
             document.getElementById('live-time').textContent =
-                now.toLocaleTimeString('id-ID', { hour12: false });
+                new Date().toLocaleTimeString('id-ID', { hour12: false });
         }
-        updateTime();
-        setInterval(updateTime, 1000);
+        tick(); setInterval(tick, 1000);
 
-        // Close popup on map click
         map.on('click', () => popup.classList.remove('visible'));
     </script>
 </body>
